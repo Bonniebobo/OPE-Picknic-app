@@ -1,22 +1,13 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
-import WelcomeScreen from './src/screens/WelcomeScreen';
-import Onboarding from './src/screens/Onboarding';
-import EatingPreferenceScreen from './src/screens/EatingPreferenceScreen';
-
-const Stack = createNativeStackNavigator();
+import { StatusBar } from 'expo-status-bar';
+import AppFlowV3 from './src/screens/AppFlow';
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
-        <Stack.Screen name="Onboarding" component={Onboarding} />
-        <Stack.Screen name="EatingPreference" component={EatingPreferenceScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <>
+      <StatusBar style="auto" />
+      <AppFlowV3 />
+    </>
   );
 }
 // import { StatusBar } from 'expo-status-bar';

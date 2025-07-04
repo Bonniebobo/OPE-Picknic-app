@@ -55,13 +55,11 @@ export default function EatingPreferenceScreen({ onComplete }: EatingPreferenceS
 
   const handleContinue = () => {
     if (selectedOption) {
-      console.log('Continue pressed, selected:', selectedOption);
       onComplete(selectedOption);
     }
   };
 
   const handleSkip = () => {
-    console.log('Skip pressed');
     onComplete('unsure');
   };
 

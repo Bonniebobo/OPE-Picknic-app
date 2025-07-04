@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 
 const chatHistory = [
   {
@@ -40,7 +40,7 @@ export default function ChatPage() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Header */}
         <View style={styles.header}>
@@ -102,12 +102,12 @@ export default function ChatPage() {
           <Text style={styles.newChatBtnText}>Start New Chat</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFF7ED' },
+  container: { flex: 1, backgroundColor: '#FFF7ED' },
   scrollContainer: { flexGrow: 1, paddingBottom: 24 },
   header: { alignItems: 'center', paddingTop: 48, paddingBottom: 24, paddingHorizontal: 24 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 6 },

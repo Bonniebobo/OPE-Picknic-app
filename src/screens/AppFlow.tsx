@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import WelcomeScreen from './WelcomeScreen';
 import EatingPreferenceScreen from './EatingPreferenceScreen';
 import MainApp from './MainApp';
@@ -6,24 +6,23 @@ import Onboarding from './Onboarding';
 
 type FlowStep = 'welcome' | 'onboarding' | 'eating-preference' | 'main-app';
 
-export default function AppFlow() {
+export default function AppFlowV3() {
   const [currentStep, setCurrentStep] = useState<FlowStep>('welcome');
   const [eatingPreference, setEatingPreference] = useState<string>('unsure');
-
-  const handleOnboardingComplete = (preference: string) => {
-    setEatingPreference(preference);
-    setCurrentStep('eating-preference');
-  };
-
-  const handleWelcomeComplete = () => {
+  
+  const handleWelcomeComplete = useCallback(() => {
     setCurrentStep('onboarding');
-  };
-
-  const handleEatingPreferenceComplete = (preference: string) => {
+  }, []);
+  
+  const handleOnboardingComplete = useCallback((preference: string) => {
+    setCurrentStep('eating-preference');
+  }, []);
+  
+  const handleEatingPreferenceComplete = useCallback((preference: string) => {
     setEatingPreference(preference);
     setCurrentStep('main-app');
-  };
-
+  }, []);
+  
   switch (currentStep) {
     case 'welcome':
       return <WelcomeScreen onComplete={handleWelcomeComplete} />;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 
 const calendarData: Record<string, { bot: string; meal: string; activity: string }> = {
   '2024-01-15': { bot: '🐰', meal: '🍜', activity: 'Comfort ramen chat' },
@@ -50,7 +50,7 @@ export default function CalendarPage() {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Header */}
         <View style={styles.header}>
@@ -132,12 +132,12 @@ export default function CalendarPage() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFF7ED' },
+  container: { flex: 1, backgroundColor: '#FFF7ED' },
   scrollContainer: { flexGrow: 1, paddingBottom: 24 },
   header: { alignItems: 'center', paddingTop: 48, paddingBottom: 24, paddingHorizontal: 24 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1F2937', marginBottom: 6 },

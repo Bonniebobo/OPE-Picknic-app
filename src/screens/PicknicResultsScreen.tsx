@@ -224,9 +224,9 @@ export default function PicknicResultsScreen({ botId, eatingPreference, onBack, 
                 </View>
                 <TouchableOpacity style={styles.suggestionActionBtn} onPress={() => handleSuggestionAction(suggestion.modeId, suggestion)} activeOpacity={0.85}>
                   <Text style={styles.suggestionActionBtnText}>
-                    {suggestion.modeId === 'cook' && '🍳 Get Recipe'}
-                    {suggestion.modeId === 'delivery' && '🛵 Order Now'}
-                    {suggestion.modeId === 'restaurant' && '🍽️ See Details'}
+                    {suggestion.modeId === 'cook' && 'Get Recipe'}
+                    {suggestion.modeId === 'delivery' && 'Order Now'}
+                    {suggestion.modeId === 'restaurant' && 'See Details'}
                   </Text>
                 </TouchableOpacity>
               </View>

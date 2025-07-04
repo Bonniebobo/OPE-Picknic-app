@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-import Onboarding from './Onboarding';
 
 const characters = [
   {
@@ -46,10 +45,10 @@ interface PicknicWelcomeProps {
 }
 
 export default function WelcomeScreen({ onComplete }: PicknicWelcomeProps) {
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
   const handleBegin = () => {
-    setShowOnboarding(true);
+    if (onComplete) {
+      onComplete();
+    }
   };
 
   const handleSkip = () => {
@@ -57,10 +56,6 @@ export default function WelcomeScreen({ onComplete }: PicknicWelcomeProps) {
       onComplete();
     }
   };
-
-  if (showOnboarding) {
-    return <Onboarding onComplete={onComplete} />;
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>

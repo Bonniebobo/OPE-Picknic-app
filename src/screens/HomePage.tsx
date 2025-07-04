@@ -134,7 +134,7 @@ export default function HomePage({ eatingPreference = 'unsure', onBotSelect }: {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Greeting Section */}
         <View style={styles.greetingSection}>
@@ -212,12 +212,12 @@ export default function HomePage({ eatingPreference = 'unsure', onBotSelect }: {
           </ScrollView>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFF7ED' },
+  container: { flex: 1, backgroundColor: '#FFF7ED' },
   scrollContainer: { flexGrow: 1, paddingBottom: 24 },
   greetingSection: { flexDirection: 'row', alignItems: 'center', paddingTop: 32, paddingBottom: 16, paddingHorizontal: 24 },
   profilePic: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FBCFE8', alignItems: 'center', justifyContent: 'center', marginRight: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 3 },

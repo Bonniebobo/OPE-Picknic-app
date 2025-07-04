@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 
 const likedItems = [
   { id: '1', name: 'Homemade Ramen', type: 'recipe', emoji: '🍜', category: 'Comfort Food', mood: 'Cozy', background: '#FFEDD5' },
@@ -27,7 +27,7 @@ export default function CollectionPage() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Header */}
         <View style={styles.header}>
@@ -131,12 +131,12 @@ export default function CollectionPage() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFF7ED' },
+  container: { flex: 1, backgroundColor: '#FFF7ED' },
   scrollContainer: { flexGrow: 1, paddingBottom: 24 },
   header: { alignItems: 'center', paddingTop: 48, paddingBottom: 24, paddingHorizontal: 24 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1F2937', marginBottom: 6 },

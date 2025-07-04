@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
-import EatingPreferenceScreen from './EatingPreferenceScreen';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 // 占位：后续可替换为自定义组件
 // import { PicknicMascot } from '../components/PicknicMascot';
 // import { ArrowRight } from '../components/ArrowRight';
@@ -25,7 +24,7 @@ const questions: Question[] = [
   {
     id: 'eating-preference',
     title: "What's your usual eating preference?",
-    subtitle: 'Help us understand your dietary style so we can suggest the perfect meals! 🍽️',
+    subtitle: 'Help us understand your dietary style so we can suggest the perfect meals!',
     type: 'single',
     options: [
       { id: 'vegetarian', text: 'Vegetarian', emoji: '🥗', color: '#D1FAE5' },
@@ -37,7 +36,7 @@ const questions: Question[] = [
   {
     id: 'foods-to-avoid',
     title: 'Are there any foods you dislike or want to avoid?',
-    subtitle: "Select all that apply - we'll make sure to skip these in your recommendations! 🚫",
+    subtitle: "Select all that apply - we'll make sure to skip these in your recommendations!",
     type: 'multi',
     options: [
       { id: 'spicy', text: 'Spicy food', emoji: '🌶️', color: '#FECACA' },
@@ -50,7 +49,7 @@ const questions: Question[] = [
   {
     id: 'allergies',
     title: 'Do you have any food allergies we should know about?',
-    subtitle: 'Your safety is our priority! Select any allergies you have so we can keep you safe 🛡️',
+    subtitle: 'Your safety is our priority! Select any allergies you have so we can keep you safe',
     type: 'multi',
     options: [
       { id: 'peanuts', text: 'Peanuts', emoji: '🥜', color: '#FDE68A' },
@@ -70,40 +69,17 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [showEatingPreference, setShowEatingPreference] = useState(false);
 
   const currentQuestion = questions[currentStep];
   const progress = ((currentStep + 1) / questions.length) * 100;
   const canContinue = selectedOptions.length > 0;
 
-  const handleOptionSelect = (optionId: string) => {
-    if (currentQuestion.type === 'single') {
-      setSelectedOptions([optionId]);
-    } else {
-      // Multi-select logic
-      if (optionId === 'none' || optionId === 'no-allergies') {
-        setSelectedOptions([optionId]);
-      } else {
-        const filteredOptions = selectedOptions.filter((id) => id !== 'none' && id !== 'no-allergies');
-        if (selectedOptions.includes(optionId)) {
-          setSelectedOptions(filteredOptions.filter((id) => id !== optionId));
-        } else {
-          setSelectedOptions([...filteredOptions, optionId]);
-        }
-      }
-    }
-  };
-
   const handleNext = () => {
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: currentQuestion.type === 'single' ? selectedOptions[0] : selectedOptions,
-    }));
     if (currentStep < questions.length - 1) {
-      setCurrentStep((prev) => prev + 1);
+      setCurrentStep(currentStep + 1);
       setSelectedOptions([]);
     } else {
-      setShowEatingPreference(true);
+      onComplete?.('onboarding-complete');
     }
   };
 
@@ -112,7 +88,9 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
       setCurrentStep((prev) => prev + 1);
       setSelectedOptions([]);
     } else {
-      setShowEatingPreference(true);
+      if (onComplete) {
+        onComplete('onboarding-skipped');
+      }
     }
   };
 
@@ -129,18 +107,8 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
     }
   };
 
-  const handleEatingPreferenceComplete = (preference: string) => {
-    if (onComplete) {
-      onComplete(preference);
-    }
-  };
-
-  if (showEatingPreference) {
-    return <EatingPreferenceScreen onComplete={handleEatingPreferenceComplete} />;
-  }
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Header */}
         <View style={styles.header}>
@@ -170,7 +138,22 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
                 return (
                   <TouchableOpacity
                     key={option.id}
-                    onPress={() => handleOptionSelect(option.id)}
+                    onPress={() => {
+                      if (currentQuestion.type === 'single') {
+                        setSelectedOptions([option.id]);
+                      } else {
+                        if (option.id === 'none' || option.id === 'no-allergies') {
+                          setSelectedOptions([option.id]);
+                        } else {
+                          const filteredOptions = selectedOptions.filter((id) => id !== 'none' && id !== 'no-allergies');
+                          if (selectedOptions.includes(option.id)) {
+                            setSelectedOptions(filteredOptions.filter((id) => id !== option.id));
+                          } else {
+                            setSelectedOptions([...filteredOptions, option.id]);
+                          }
+                        }
+                      }
+                    }}
                     style={[
                       styles.optionButton,
                       {
@@ -218,7 +201,7 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
             disabled={!canContinue}
           >
             <Text style={[styles.continueButtonText, !canContinue && styles.continueButtonTextDisabled]}>
-              {currentStep === questions.length - 1 ? 'Almost Done! 🎉' : 'Continue'}
+              {currentStep === questions.length - 1 ? 'Almost Done!' : 'Continue'}
             </Text>
             {/* <ArrowRight /> */}
           </TouchableOpacity>
@@ -227,12 +210,12 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: '#FFF7ED',
   },
