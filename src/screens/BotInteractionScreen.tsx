@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-// import PicknicResultsScreen from './PicknicResultsScreen'; // TODO: 迁移后集成
+import ChooseIngredientsScreen from './ChooseIngredientsScreen';
+import PhotoDishScreen from './PhotoDishScreen';
+import RecipeResultsScreen from './RecipeResultsScreen';
+import ScanIngredientsScreen from './ScanIngredientsScreen';
 
 const botData: any = {
   'mood-matcher': {
@@ -31,7 +34,7 @@ const botData: any = {
     description: 'Your caring kitchen companion who helps you decide what to cook',
     options: [
       { id: 'select-ingredients', title: 'Choose ingredients', description: 'Select what you have or want to use', icon: '🥬', background: '#FFFBEB' },
-      { id: 'photo-fridge', title: 'Photo your fridge', description: ",I'll extract ingredients from your photo", icon: '📷', background: '#FFFBEB' },
+      { id: 'photo-dish', title: 'Photo your dish', description: "I'll extract ingredients and recipes from your photo", icon: '📷', background: '#FFFBEB' },
     ],
   },
   'play-mode-bot': {
@@ -49,10 +52,69 @@ const botData: any = {
 
 export default function BotInteractionScreen({ botId, eatingPreference, onBack }: { botId: string; eatingPreference: string; onBack: () => void }) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [showPicknicResults, setShowPicknicResults] = useState(false);
   const [userContext, setUserContext] = useState<any>(null);
+  const [showChooseIngredients, setShowChooseIngredients] = useState(false);
+  const [showPhotoDish, setShowPhotoDish] = useState(false);
+  const [showScanIngredients, setShowScanIngredients] = useState(false);
+  const [showRecipeResults, setShowRecipeResults] = useState(false);
+  const [recipeData, setRecipeData] = useState<any>(null);
 
   const bot = botData[botId as keyof typeof botData];
+
+  if (showRecipeResults) {
+    return (
+      <RecipeResultsScreen 
+        onBack={() => setShowRecipeResults(false)}
+        ingredients={recipeData?.ingredients}
+        imageData={recipeData?.imageData}
+      />
+    );
+  }
+
+  if (showScanIngredients) {
+    return (
+      <ScanIngredientsScreen 
+        onBack={() => setShowScanIngredients(false)}
+        onConfirm={(ingredients) => {
+          setRecipeData({ ingredients });
+          setShowScanIngredients(false);
+          setShowRecipeResults(true);
+        }}
+      />
+    );
+  }
+
+  if (showChooseIngredients) {
+    return (
+      <ChooseIngredientsScreen 
+        onBack={() => setShowChooseIngredients(false)}
+        onContinue={(ingredients) => {
+          setRecipeData({ ingredients });
+          setShowChooseIngredients(false);
+          setShowRecipeResults(true);
+        }}
+        onScanIngredients={() => {
+          setShowChooseIngredients(false);
+          setShowScanIngredients(true);
+        }}
+      />
+    );
+  }
+
+  if (showPhotoDish) {
+    return (
+      <PhotoDishScreen 
+        onBack={() => setShowPhotoDish(false)}
+        onGetRecipe={(imageData) => {
+          setRecipeData({ imageData });
+          setShowPhotoDish(false);
+          setShowRecipeResults(true);
+        }}
+      />
+    );
+  }
+
+
 
   if (!bot) {
     return (
@@ -62,6 +124,14 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
 
   const handleOptionSelect = (optionId: string) => {
     setSelectedOption(optionId);
+    if (optionId === 'photo-dish') {
+      setShowPhotoDish(true);
+      return;
+    }
+    if (optionId === 'select-ingredients') {
+      setShowChooseIngredients(true);
+      return;
+    }
     // Simulate collecting user context based on the option
     const mockContext: any = {
       'select-mood': 'cozy',
@@ -70,31 +140,14 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
       'upload-scene': 'local_market',
       'explore-flavors': 'spicy',
       'select-ingredients': ['tomato', 'basil', 'cheese'],
-      'photo-fridge': ['eggs', 'milk', 'vegetables'],
+      'photo-dish': ['eggs', 'milk', 'vegetables'],
     };
     setUserContext(mockContext[optionId]);
   };
 
-  const handleHavePicknic = () => {
-    setShowPicknicResults(true);
-  };
 
-  const handleBackFromPicknic = () => {
-    setShowPicknicResults(false);
-  };
 
-  // Show Picknic Results screen
-  if (showPicknicResults) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        {/* TODO: 替换为 <PicknicResultsScreen ... /> */}
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text>Picknic Results Screen 占位</Text>
-          <TouchableOpacity style={styles.backBtn} onPress={handleBackFromPicknic}><Text style={styles.backBtnText}>Back</Text></TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -141,10 +194,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
             </TouchableOpacity>
           ))}
         </View>
-        {/* Have a Picknic Button */}
-        <TouchableOpacity style={styles.picknicBtn} onPress={handleHavePicknic} activeOpacity={0.85}>
-          <Text style={styles.picknicBtnText}>🧺 Have a Picknic</Text>
-        </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -171,6 +221,4 @@ const styles = StyleSheet.create({
   optionDesc: { fontSize: 13, color: '#6B7280' },
   selectedDotOuter: { width: 24, height: 24, backgroundColor: '#FB7185', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   selectedDotInner: { width: 8, height: 8, backgroundColor: '#fff', borderRadius: 4 },
-  picknicBtn: { marginHorizontal: 24, marginTop: 8, backgroundColor: '#FB7185', borderRadius: 32, paddingVertical: 16, alignItems: 'center', shadowColor: '#FB7185', shadowOpacity: 0.18, shadowRadius: 8, elevation: 2 },
-  picknicBtnText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
 }); 

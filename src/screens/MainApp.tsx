@@ -10,9 +10,10 @@ import BotInteractionScreen from './BotInteractionScreen';
 
 interface MainAppProps {
   eatingPreference?: string;
+  cuisinePreferences?: string[];
 }
 
-export default function MainApp({ eatingPreference = 'unsure' }: MainAppProps) {
+export default function MainApp({ eatingPreference = 'unsure', cuisinePreferences = [] }: MainAppProps) {
   const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'calendar' | 'collection'>('home');
   const [selectedBot, setSelectedBot] = useState<string | null>(null);
 
