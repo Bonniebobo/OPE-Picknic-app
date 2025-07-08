@@ -6,11 +6,12 @@ interface RecipeResultsScreenProps {
   onBack: () => void;
   ingredients?: string[];
   imageData?: any;
+  onChatMore: () => void;
 }
 
 
 
-export default function RecipeResultsScreen({ onBack, ingredients, imageData }: RecipeResultsScreenProps) {
+export default function RecipeResultsScreen({ onBack, ingredients, imageData, onChatMore }: RecipeResultsScreenProps) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -150,36 +151,42 @@ export default function RecipeResultsScreen({ onBack, ingredients, imageData }: 
             <Text style={styles.loadingText}>Finding perfect recipes...</Text>
           </View>
         ) : (
-          <View style={styles.recipesContainer}>
-            {recipes.map((recipe) => (
-              <TouchableOpacity
-                key={recipe.id}
-                style={styles.recipeCard}
-                onPress={() => handleRecipeSelect(recipe)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.recipeCardContent}>
-                  <View style={styles.recipeHeader}>
-                    <Text style={styles.recipeName}>{recipe.name}</Text>
-                    {renderDifficultyBadge(recipe.difficulty)}
-                  </View>
-                  
-                  <Text style={styles.recipeDescription}>{recipe.description}</Text>
-                  
-                  <View style={styles.recipeFooter}>
-                    <View style={styles.recipeMeta}>
-                      {renderStars(recipe.rating)}
-                      <Text style={styles.recipeTime}>
-                        ⏱️ {recipe.prepTime} + {recipe.cookTime}
-                      </Text>
+          <>
+            <View style={styles.recipesContainer}>
+              {recipes.map((recipe) => (
+                <TouchableOpacity
+                  key={recipe.id}
+                  style={styles.recipeCard}
+                  onPress={() => handleRecipeSelect(recipe)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.recipeCardContent}>
+                    <View style={styles.recipeHeader}>
+                      <Text style={styles.recipeName}>{recipe.name}</Text>
+                      {renderDifficultyBadge(recipe.difficulty)}
                     </View>
                     
-                    <Text style={styles.viewRecipeText}>View Recipe →</Text>
+                    <Text style={styles.recipeDescription}>{recipe.description}</Text>
+                    
+                    <View style={styles.recipeFooter}>
+                      <View style={styles.recipeMeta}>
+                        {renderStars(recipe.rating)}
+                        <Text style={styles.recipeTime}>
+                          ⏱️ {recipe.prepTime} + {recipe.cookTime}
+                        </Text>
+                      </View>
+                      
+                      <Text style={styles.viewRecipeText}>View Recipe →</Text>
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {/* Chat More Button */}
+            <TouchableOpacity style={styles.chatMoreBtn} onPress={onChatMore}>
+              <Text style={styles.chatMoreBtnText}>💬 Chat more about your preferences</Text>
+            </TouchableOpacity>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -412,5 +419,23 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     flex: 1,
     lineHeight: 22,
+  },
+  chatMoreBtn: {
+    backgroundColor: '#F3E8FF',
+    borderRadius: 20,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginTop: 12,
+    marginBottom: 24,
+    shadowColor: '#D8B4FE',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  chatMoreBtnText: {
+    color: '#7C3AED',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 
