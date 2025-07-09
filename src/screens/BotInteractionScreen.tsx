@@ -4,6 +4,7 @@ import ChooseIngredientsScreen from './ChooseIngredientsScreen';
 import PhotoDishScreen from './PhotoDishScreen';
 import RecipeResultsScreen from './RecipeResultsScreen';
 import ScanIngredientsScreen from './ScanIngredientsScreen';
+import RecipeChatBoxScreen from './RecipeChatBoxScreen';
 
 const botData: any = {
   'mood-matcher': {
@@ -57,16 +58,44 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
   const [showPhotoDish, setShowPhotoDish] = useState(false);
   const [showScanIngredients, setShowScanIngredients] = useState(false);
   const [showRecipeResults, setShowRecipeResults] = useState(false);
+  const [showRecipeChat, setShowRecipeChat] = useState(false);
   const [recipeData, setRecipeData] = useState<any>(null);
+  const [previousScreen, setPreviousScreen] = useState<string | null>(null);
 
   const bot = botData[botId as keyof typeof botData];
+
+  if (showRecipeChat) {
+    return (
+      <RecipeChatBoxScreen 
+        onBack={() => setShowRecipeChat(false)}
+        onPicnic={(chatHistory) => {
+          // Handle final recipe generation with chat history
+          console.log('Chat history for final recipe:', chatHistory);
+          setShowRecipeChat(false);
+          // Could navigate to final recipe results here
+        }}
+        initialIngredients={recipeData?.ingredients}
+      />
+    );
+  }
 
   if (showRecipeResults) {
     return (
       <RecipeResultsScreen 
-        onBack={() => setShowRecipeResults(false)}
+        onBack={() => {
+          setShowRecipeResults(false);
+          // Return to the previous screen based on what led to recipe results
+          if (previousScreen === 'choose-ingredients') {
+            setShowChooseIngredients(true);
+          } else if (previousScreen === 'photo-dish') {
+            setShowPhotoDish(true);
+          } else if (previousScreen === 'scan-ingredients') {
+            setShowScanIngredients(true);
+          }
+        }}
         ingredients={recipeData?.ingredients}
         imageData={recipeData?.imageData}
+        onChatMore={() => setShowRecipeChat(true)}
       />
     );
   }
@@ -77,6 +106,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
         onBack={() => setShowScanIngredients(false)}
         onConfirm={(ingredients) => {
           setRecipeData({ ingredients });
+          setPreviousScreen('scan-ingredients');
           setShowScanIngredients(false);
           setShowRecipeResults(true);
         }}
@@ -90,6 +120,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
         onBack={() => setShowChooseIngredients(false)}
         onContinue={(ingredients) => {
           setRecipeData({ ingredients });
+          setPreviousScreen('choose-ingredients');
           setShowChooseIngredients(false);
           setShowRecipeResults(true);
         }}
@@ -107,6 +138,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
         onBack={() => setShowPhotoDish(false)}
         onGetRecipe={(imageData) => {
           setRecipeData({ imageData });
+          setPreviousScreen('photo-dish');
           setShowPhotoDish(false);
           setShowRecipeResults(true);
         }}
