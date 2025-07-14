@@ -2,9 +2,20 @@ import Constants from 'expo-constants';
 
 const { EDAMAM_ID, EDAMAM_KEY } = Constants.expoConfig.extra;
 
+// Add debug logging
+console.log('Edamam configuration check:');
+console.log('EDAMAM_ID available:', !!EDAMAM_ID);
+console.log('EDAMAM_KEY available:', !!EDAMAM_KEY);
+
 // Fetch recipes from Edamam API
 export async function fetchRecipesFromEdamam(ingredients) {
     try {
+        // Validate API credentials
+        if (!EDAMAM_ID || !EDAMAM_KEY) {
+            console.error('Edamam API credentials are missing');
+            return generateMockRecipes(ingredients);
+        }
+
         console.log("Fetching recipes from Edamam for ingredients:", ingredients);
         
         // Join ingredients with spaces for the query

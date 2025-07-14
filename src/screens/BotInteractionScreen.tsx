@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-import ChooseIngredientsScreen from './ChooseIngredientsScreen';
-import PhotoDishScreen from './PhotoDishScreen';
+import RecipeHelperScreen from './RecipeHelperScreen';
 import RecipeResultsScreen from './RecipeResultsScreen';
-import ScanIngredientsScreen from './ScanIngredientsScreen';
 import RecipeChatBoxScreen from './RecipeChatBoxScreen';
 import { fetchRecipesFromEdamam } from '../services/edamamService';
 
@@ -35,8 +33,7 @@ const botData: any = {
     background: '#FFEDD5',
     description: 'Your caring kitchen companion who helps you decide what to cook',
     options: [
-      { id: 'select-ingredients', title: 'Choose ingredients', description: 'Select what you have or want to use', icon: '🥬', background: '#FFFBEB' },
-      { id: 'photo-dish', title: 'Photo your dish', description: "I'll extract ingredients and recipes from your photo", icon: '📷', background: '#FFFBEB' },
+      { id: 'recipe-helper', title: 'Start Recipe Helper', description: 'Choose between manual input or AI assistant', icon: '🍽️', background: '#FFFBEB' },
     ],
   },
   'play-mode-bot': {
@@ -60,8 +57,15 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
   const [showScanIngredients, setShowScanIngredients] = useState(false);
   const [showRecipeResults, setShowRecipeResults] = useState(false);
   const [showRecipeChat, setShowRecipeChat] = useState(false);
+  const [showRecipeHelper, setShowRecipeHelper] = useState(false);
   const [recipeData, setRecipeData] = useState<any>(null);
-  const [previousScreen, setPreviousScreen] = useState<string | null>(null);
+
+  // Automatically enter RecipeHelperScreen for recipe-helper bot
+  useEffect(() => {
+    if (botId === 'recipe-helper') {
+      setShowRecipeHelper(true);
+    }
+  }, [botId]);
 
   const bot = botData[botId as keyof typeof botData];
 
@@ -85,14 +89,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
       <RecipeResultsScreen 
         onBack={() => {
           setShowRecipeResults(false);
-          // Return to the previous screen based on what led to recipe results
-          if (previousScreen === 'choose-ingredients') {
-            setShowChooseIngredients(true);
-          } else if (previousScreen === 'photo-dish') {
-            setShowPhotoDish(true);
-          } else if (previousScreen === 'scan-ingredients') {
-            setShowScanIngredients(true);
-          }
+          setShowRecipeHelper(true);
         }}
         ingredients={recipeData?.ingredients}
         imageData={recipeData?.imageData}
@@ -102,49 +99,22 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
     );
   }
 
-  if (showScanIngredients) {
+  if (showRecipeHelper) {
     return (
-      <ScanIngredientsScreen 
-        onBack={() => setShowScanIngredients(false)}
-        onConfirm={(ingredients) => {
-          setRecipeData({ ingredients });
-          setPreviousScreen('scan-ingredients');
-          setShowScanIngredients(false);
-          setShowRecipeResults(true);
-        }}
-      />
-    );
-  }
-
-  if (showChooseIngredients) {
-    return (
-      <ChooseIngredientsScreen 
-        onBack={() => setShowChooseIngredients(false)}
-        onContinue={async (ingredients) => {
-          // 调用Edamam API获取真实菜谱
-          const recipes = await fetchRecipesFromEdamam(ingredients);
-          setRecipeData({ ingredients, recipes });
-          setPreviousScreen('choose-ingredients');
-          setShowChooseIngredients(false);
-          setShowRecipeResults(true);
-        }}
-        onScanIngredients={() => {
-          setShowChooseIngredients(false);
-          setShowScanIngredients(true);
-        }}
-      />
-    );
-  }
-
-  if (showPhotoDish) {
-    return (
-      <PhotoDishScreen 
-        onBack={() => setShowPhotoDish(false)}
-        onGetRecipe={(imageData) => {
-          setRecipeData({ imageData });
-          setPreviousScreen('photo-dish');
-          setShowPhotoDish(false);
-          setShowRecipeResults(true);
+      <RecipeHelperScreen 
+        onBack={onBack}
+        onIngredientsConfirmed={async (ingredients) => {
+          console.log('🔄 Processing ingredients:', ingredients);
+          try {
+            // Fetch recipes using the confirmed ingredients
+            const recipes = await fetchRecipesFromEdamam(ingredients);
+            console.log('✅ Recipes fetched, navigating to results');
+            setRecipeData({ ingredients, recipes });
+            setShowRecipeHelper(false);
+            setShowRecipeResults(true);
+          } catch (error) {
+            console.error('❌ Error fetching recipes:', error);
+          }
         }}
       />
     );
@@ -160,12 +130,8 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
 
   const handleOptionSelect = (optionId: string) => {
     setSelectedOption(optionId);
-    if (optionId === 'photo-dish') {
-      setShowPhotoDish(true);
-      return;
-    }
-    if (optionId === 'select-ingredients') {
-      setShowChooseIngredients(true);
+    if (optionId === 'recipe-helper') {
+      setShowRecipeHelper(true);
       return;
     }
     // Simulate collecting user context based on the option
@@ -175,8 +141,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
       'share-location': 'downtown',
       'upload-scene': 'local_market',
       'explore-flavors': 'spicy',
-      'select-ingredients': ['tomato', 'basil', 'cheese'],
-      'photo-dish': ['eggs', 'milk', 'vegetables'],
+      'recipe-helper': ['ingredients', 'recipe', 'generation'],
     };
     setUserContext(mockContext[optionId]);
   };

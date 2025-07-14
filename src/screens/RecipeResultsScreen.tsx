@@ -20,10 +20,12 @@ export default function RecipeResultsScreen({ onBack, ingredients, imageData, re
   useEffect(() => {
     const fetchRecipes = async () => {
       try {
+        let fetchedRecipes: Recipe[] = [];
+        
         // If recipes are passed from parent (e.g., from PhotoDishScreen), use them
         if (passedRecipes && passedRecipes.length > 0) {
           console.log('Using passed recipes:', passedRecipes.length);
-          setRecipes(passedRecipes);
+          fetchedRecipes = passedRecipes;
         } else {
           // Fallback to generating recipes (for other flows)
           console.log('Generating recipes for ingredients:', ingredients);
@@ -31,8 +33,19 @@ export default function RecipeResultsScreen({ onBack, ingredients, imageData, re
             ingredients,
             imageData,
           });
-          setRecipes(response.recipes);
+          fetchedRecipes = response.recipes;
         }
+
+        // Sort recipes by difficulty: Easy → Medium → Hard
+        const difficultyOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
+        const sortedRecipes = fetchedRecipes.sort((a, b) => {
+          const orderA = difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 4;
+          const orderB = difficultyOrder[b.difficulty as keyof typeof difficultyOrder] || 4;
+          return orderA - orderB;
+        });
+
+        console.log('✅ Recipes sorted by difficulty (Easy → Medium → Hard)');
+        setRecipes(sortedRecipes);
       } catch (error) {
         console.error('Error fetching recipes:', error);
         setRecipes([]);
@@ -152,6 +165,9 @@ export default function RecipeResultsScreen({ onBack, ingredients, imageData, re
           <Text style={styles.resultsSubtitle}>
             Based on {ingredients ? `${ingredients.length} ingredients` : 'your photo'}
           </Text>
+          <View style={styles.sortIndicator}>
+            <Text style={styles.sortText}>📊 Sorted by difficulty: Easy → Medium → Hard</Text>
+          </View>
         </View>
 
         {isLoading ? (
@@ -446,5 +462,18 @@ const styles = StyleSheet.create({
     color: '#7C3AED',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  sortIndicator: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  sortText: {
+    fontSize: 14,
+    color: '#4B5563',
+    fontWeight: '500',
   },
 }); 
