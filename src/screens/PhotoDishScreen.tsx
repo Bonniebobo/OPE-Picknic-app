@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { identify_image_ingredients } from '../services/imageAnalysis';
+import { fetchRecipesFromEdamam } from '../services/edamamService';
 
 interface PhotoDishScreenProps {
   onBack: () => void;
@@ -9,60 +12,168 @@ interface PhotoDishScreenProps {
 export default function PhotoDishScreen({ onBack, onGetRecipe }: PhotoDishScreenProps) {
   const [hasImage, setHasImage] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [identifiedIngredients, setIdentifiedIngredients] = useState<string[]>([]);
 
-  const handleTakePhoto = () => {
-    Alert.alert(
-      'Take Photo',
-      'Camera integration will be implemented. For now, this is a mock photo.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Mock Photo', 
-          onPress: () => {
-            setHasImage(true);
-            setImageUri('https://via.placeholder.com/300x400/FFEDD5/1F2937?text=Your+Dish+Photo');
-          }
-        }
-      ]
-    );
+  const requestPermissions = async () => {
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
+      Alert.alert(
+        'Permissions Required',
+        'Camera and photo library permissions are required to use this feature.',
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+    return true;
   };
 
-  const handleUploadPhoto = () => {
-    Alert.alert(
-      'Upload Photo',
-      'Gallery integration will be implemented. For now, this is a mock photo.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Mock Upload', 
-          onPress: () => {
-            setHasImage(true);
-            setImageUri('https://via.placeholder.com/300x400/FFEDD5/1F2937?text=Uploaded+Dish+Photo');
-          }
-        }
-      ]
-    );
+  const handleTakePhoto = async () => {
+    const hasPermissions = await requestPermissions();
+    if (!hasPermissions) return;
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setHasImage(true);
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 || null);
+        setIdentifiedIngredients([]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  const handleUploadPhoto = async () => {
+    const hasPermissions = await requestPermissions();
+    if (!hasPermissions) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setHasImage(true);
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 || null);
+        setIdentifiedIngredients([]);
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      Alert.alert('Error', 'Failed to upload photo. Please try again.');
+    }
   };
 
   const handleRetakePhoto = () => {
     setHasImage(false);
     setImageUri(null);
+    setImageBase64(null);
+    setIdentifiedIngredients([]);
   };
 
-  const handleGetRecipe = () => {
-    if (!hasImage) {
+  // Helper: fuzzy ingredient match (ignores case, plurals, adjectives)
+  function isIngredientMatch(recipeIngredient: string, userIngredients: string[]) {
+    // Normalize: lowercase, remove punctuation, trim, singularize (basic)
+    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\bes?\b/g, '').trim();
+    const recipeWords = normalize(recipeIngredient).split(' ');
+    // Try to find a user ingredient that matches any word in the recipe ingredient
+    return userIngredients.some(userIng => {
+      const userNorm = normalize(userIng);
+      // If any word in the recipe ingredient matches the user ingredient
+      return recipeWords.some(word => word && userNorm.includes(word));
+    });
+  }
+
+  // Helper: check if recipe uses only user ingredients (strict filtering)
+  function recipeUsesOnlyUserIngredients(recipe: any, userIngredients: string[]) {
+    if (!recipe.ingredients || !Array.isArray(recipe.ingredients)) {
+      console.log('Recipe has no ingredients array:', recipe.name);
+      return false;
+    }
+    
+    console.log(`Checking recipe "${recipe.name}" with ${recipe.ingredients.length} ingredients`);
+    console.log('Recipe ingredients:', recipe.ingredients);
+    console.log('User ingredients:', userIngredients);
+    
+    // Check if every ingredient in the recipe matches a user ingredient
+    const allIngredientsMatch = recipe.ingredients.every((ingredient: string) => {
+      const matches = isIngredientMatch(ingredient, userIngredients);
+      if (!matches) {
+        console.log(`❌ Ingredient "${ingredient}" not found in user ingredients`);
+      }
+      return matches;
+    });
+    
+    if (allIngredientsMatch) {
+      console.log(`✅ Recipe "${recipe.name}" uses only user ingredients`);
+    } else {
+      console.log(`❌ Recipe "${recipe.name}" requires additional ingredients`);
+    }
+    
+    return allIngredientsMatch;
+  }
+
+  const handleGetRecipe = async () => {
+    if (!hasImage || !imageBase64) {
       Alert.alert('No Photo', 'Please take or upload a photo first.');
       return;
     }
 
     setIsProcessing(true);
     
-    // Simulate API processing
-    setTimeout(() => {
+    try {
+      // Step 1: Identify ingredients from image using OpenAI Vision
+      console.log('Analyzing image for ingredients...');
+      const ingredients = await identify_image_ingredients(imageBase64);
+      setIdentifiedIngredients(ingredients);
+      
+      // Step 2: Fetch recipes from Edamam API
+      console.log('Fetching recipes for ingredients:', ingredients);
+      let recipes = await fetchRecipesFromEdamam(ingredients);
+
+      // Step 2.5: Filter recipes to only those using only user-selected ingredients
+      console.log(`Filtering ${recipes.length} recipes to only use user ingredients...`);
+      const filteredRecipes = recipes.filter((recipe: any) => 
+        recipeUsesOnlyUserIngredients(recipe, ingredients)
+      );
+      console.log(`Found ${filteredRecipes.length} recipes that use only user ingredients`);
+
+      // Step 3: Pass data to parent component
+      onGetRecipe({
+        imageUri,
+        imageBase64,
+        ingredients,
+        recipes: filteredRecipes,
+        source: 'photo-analysis'
+      });
+      
+    } catch (error) {
+      console.error('Error processing image:', error);
+      Alert.alert(
+        'Processing Error',
+        'Failed to analyze the image. Please try again with a clearer photo.',
+        [{ text: 'OK' }]
+      );
+    } finally {
       setIsProcessing(false);
-      onGetRecipe({ imageUri, ingredients: ['tomato', 'basil', 'cheese'] });
-    }, 2000);
+    }
   };
 
   return (
@@ -79,7 +190,7 @@ export default function PhotoDishScreen({ onBack, onGetRecipe }: PhotoDishScreen
         {/* Bot Header */}
         <View style={styles.botCard}>
           <Text style={styles.botEmoji}>📷</Text>
-          <Text style={styles.botName}>Photo Analysis</Text>
+          <Text style={styles.botName}>Photo Your Dish</Text>
           <Text style={styles.botDesc}>I'll identify ingredients and suggest recipes from your photo</Text>
         </View>
 
@@ -112,6 +223,20 @@ export default function PhotoDishScreen({ onBack, onGetRecipe }: PhotoDishScreen
             </View>
           )}
         </View>
+
+        {/* Identified Ingredients */}
+        {identifiedIngredients.length > 0 && (
+          <View style={styles.ingredientsSection}>
+            <Text style={styles.ingredientsTitle}>Identified ingredients:</Text>
+            <View style={styles.ingredientsList}>
+              {identifiedIngredients.map((ingredient, index) => (
+                <View key={index} style={styles.ingredientItem}>
+                  <Text style={styles.ingredientText}>• {ingredient}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Instructions */}
         <View style={styles.instructionsSection}>
@@ -280,6 +405,28 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 14,
     fontWeight: '600',
+  },
+  ingredientsSection: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  ingredientsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  ingredientsList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+  },
+  ingredientItem: {
+    marginBottom: 8,
+  },
+  ingredientText: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   instructionsSection: {
     paddingHorizontal: 24,

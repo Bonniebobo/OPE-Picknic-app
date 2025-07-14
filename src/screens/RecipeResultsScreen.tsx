@@ -6,12 +6,13 @@ interface RecipeResultsScreenProps {
   onBack: () => void;
   ingredients?: string[];
   imageData?: any;
+  recipes?: Recipe[];
   onChatMore: () => void;
 }
 
 
 
-export default function RecipeResultsScreen({ onBack, ingredients, imageData, onChatMore }: RecipeResultsScreenProps) {
+export default function RecipeResultsScreen({ onBack, ingredients, imageData, recipes: passedRecipes, onChatMore }: RecipeResultsScreenProps) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -19,11 +20,19 @@ export default function RecipeResultsScreen({ onBack, ingredients, imageData, on
   useEffect(() => {
     const fetchRecipes = async () => {
       try {
-        const response = await generateRecipes({
-          ingredients,
-          imageData,
-        });
-        setRecipes(response.recipes);
+        // If recipes are passed from parent (e.g., from PhotoDishScreen), use them
+        if (passedRecipes && passedRecipes.length > 0) {
+          console.log('Using passed recipes:', passedRecipes.length);
+          setRecipes(passedRecipes);
+        } else {
+          // Fallback to generating recipes (for other flows)
+          console.log('Generating recipes for ingredients:', ingredients);
+          const response = await generateRecipes({
+            ingredients,
+            imageData,
+          });
+          setRecipes(response.recipes);
+        }
       } catch (error) {
         console.error('Error fetching recipes:', error);
         setRecipes([]);
@@ -33,7 +42,7 @@ export default function RecipeResultsScreen({ onBack, ingredients, imageData, on
     };
 
     fetchRecipes();
-  }, [ingredients, imageData]);
+  }, [ingredients, imageData, passedRecipes]);
 
   const handleRecipeSelect = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
@@ -169,7 +178,7 @@ export default function RecipeResultsScreen({ onBack, ingredients, imageData, on
                     <Text style={styles.recipeDescription}>{recipe.description}</Text>
                     
                     <View style={styles.recipeFooter}>
-                      <View style={styles.recipeMeta}>
+                      <View style={styles.recipeMetaRow}>
                         {renderStars(recipe.rating)}
                         <Text style={styles.recipeTime}>
                           ⏱️ {recipe.prepTime} + {recipe.cookTime}
@@ -303,7 +312,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  recipeMeta: {
+  recipeMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,

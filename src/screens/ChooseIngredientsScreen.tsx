@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, TextInput, Alert, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { identify_image_ingredients } from '../services/imageAnalysis';
 
 interface ChooseIngredientsScreenProps {
   onBack: () => void;
@@ -29,6 +31,11 @@ const commonIngredients = [
 export default function ChooseIngredientsScreen({ onBack, onContinue, onScanIngredients }: ChooseIngredientsScreenProps) {
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [manualInput, setManualInput] = useState('');
+  const [hasImage, setHasImage] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [identifiedIngredients, setIdentifiedIngredients] = useState<string[]>([]);
 
   const handleIngredientToggle = (ingredientId: string) => {
     setSelectedIngredients(prev => 
@@ -56,6 +63,116 @@ export default function ChooseIngredientsScreen({ onBack, onContinue, onScanIngr
       'Speech-to-text functionality will be implemented. For now, you can type or select ingredients.',
       [{ text: 'OK' }]
     );
+  };
+
+  const requestPermissions = async () => {
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
+      Alert.alert(
+        'Permissions Required',
+        'Camera and photo library permissions are required to use this feature.',
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const handleTakePhoto = async () => {
+    const hasPermissions = await requestPermissions();
+    if (!hasPermissions) return;
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setHasImage(true);
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 || null);
+        setIdentifiedIngredients([]);
+        processImage(asset.base64 || '');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  const handleUploadPhoto = async () => {
+    const hasPermissions = await requestPermissions();
+    if (!hasPermissions) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setHasImage(true);
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 || null);
+        setIdentifiedIngredients([]);
+        processImage(asset.base64 || '');
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      Alert.alert('Error', 'Failed to upload photo. Please try again.');
+    }
+  };
+
+  const processImage = async (base64: string) => {
+    if (!base64) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      console.log('Analyzing image for ingredients...');
+      const ingredients = await identify_image_ingredients(base64);
+      setIdentifiedIngredients(ingredients);
+      
+      // 自动添加识别到的ingredients到选择列表
+      const newIngredients = ingredients.filter((ingredient: string) => 
+        !selectedIngredients.includes(ingredient.toLowerCase())
+      );
+      
+      if (newIngredients.length > 0) {
+        setSelectedIngredients(prev => [...prev, ...newIngredients.map((ing: string) => ing.toLowerCase())]);
+        Alert.alert(
+          'Ingredients Identified!',
+          `Added ${newIngredients.length} new ingredients: ${newIngredients.join(', ')}`,
+          [{ text: 'OK' }]
+        );
+      }
+      
+    } catch (error) {
+      console.error('Error processing image:', error);
+      Alert.alert(
+        'Processing Error',
+        'Failed to analyze the image. Please try again with a clearer photo.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRetakePhoto = () => {
+    setHasImage(false);
+    setImageUri(null);
+    setImageBase64(null);
+    setIdentifiedIngredients([]);
   };
 
   const handleScanIngredients = () => {
@@ -128,12 +245,68 @@ export default function ChooseIngredientsScreen({ onBack, onContinue, onScanIngr
           </View>
         </View>
 
-        {/* Scan Ingredients */}
+        {/* AI Photo Recognition */}
         <View style={styles.contentSection}>
-          <Text style={styles.sectionTitle}>Or scan ingredients from photo:</Text>
+          <Text style={styles.sectionTitle}>Or use AI to recognize ingredients from photo:</Text>
+          
+          {!hasImage ? (
+            <View style={styles.photoSection}>
+              <View style={styles.uploadArea}>
+                <Text style={styles.uploadIcon}>📸</Text>
+                <Text style={styles.uploadTitle}>Take a photo of your ingredients</Text>
+                <Text style={styles.uploadSubtitle}>Or upload from your gallery</Text>
+                
+                <View style={styles.uploadButtons}>
+                  <TouchableOpacity style={styles.uploadButton} onPress={handleTakePhoto}>
+                    <Text style={styles.uploadButtonIcon}>📷</Text>
+                    <Text style={styles.uploadButtonText}>Take Photo</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPhoto}>
+                    <Text style={styles.uploadButtonIcon}>📁</Text>
+                    <Text style={styles.uploadButtonText}>Upload</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.imagePreview}>
+              <Image source={{ uri: imageUri! }} style={styles.previewImage} />
+              <TouchableOpacity style={styles.retakeButton} onPress={handleRetakePhoto}>
+                <Text style={styles.retakeButtonText}>🔄 Retake</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Processing State */}
+          {isProcessing && (
+            <View style={styles.processingSection}>
+              <Text style={styles.processingIcon}>🔍</Text>
+              <Text style={styles.processingText}>AI is analyzing ingredients...</Text>
+            </View>
+          )}
+
+          {/* Identified Ingredients */}
+          {identifiedIngredients.length > 0 && (
+            <View style={styles.identifiedSection}>
+              <Text style={styles.identifiedTitle}>AI identified ingredients:</Text>
+              <View style={styles.identifiedList}>
+                {identifiedIngredients.map((ingredient, index) => (
+                  <View key={index} style={styles.identifiedItem}>
+                    <Text style={styles.identifiedText}>• {ingredient}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Legacy Scan Button (keeping for compatibility) */}
+        <View style={styles.contentSection}>
+          <Text style={styles.sectionTitle}>Or use the old scan method:</Text>
           <TouchableOpacity style={styles.scanButton} onPress={handleScanIngredients}>
             <Text style={styles.scanButtonIcon}>📷</Text>
-            <Text style={styles.scanButtonText}>Scan Ingredients</Text>
+            <Text style={styles.scanButtonText}>Scan Ingredients (Legacy)</Text>
             <Text style={styles.scanButtonSubtext}>Take a photo or upload from gallery</Text>
           </TouchableOpacity>
         </View>
@@ -308,6 +481,119 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  // Photo recognition styles
+  photoSection: {
+    marginBottom: 16,
+  },
+  uploadArea: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+  },
+  uploadIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  uploadTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  uploadSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  uploadButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  uploadButton: {
+    backgroundColor: '#FB7185',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  uploadButtonIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  uploadButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  imagePreview: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  retakeButton: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  retakeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  processingSection: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  processingIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  processingText: {
+    fontSize: 14,
+    color: '#92400E',
+    textAlign: 'center',
+  },
+  identifiedSection: {
+    backgroundColor: '#D1FAE5',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+  },
+  identifiedTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#065F46',
+    marginBottom: 8,
+  },
+  identifiedList: {
+    gap: 4,
+  },
+  identifiedItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  identifiedText: {
+    fontSize: 14,
+    color: '#065F46',
   },
   selectedSection: {
     paddingHorizontal: 24,

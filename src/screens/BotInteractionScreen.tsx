@@ -5,6 +5,7 @@ import PhotoDishScreen from './PhotoDishScreen';
 import RecipeResultsScreen from './RecipeResultsScreen';
 import ScanIngredientsScreen from './ScanIngredientsScreen';
 import RecipeChatBoxScreen from './RecipeChatBoxScreen';
+import { fetchRecipesFromEdamam } from '../services/edamamService';
 
 const botData: any = {
   'mood-matcher': {
@@ -95,6 +96,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
         }}
         ingredients={recipeData?.ingredients}
         imageData={recipeData?.imageData}
+        recipes={recipeData?.recipes}
         onChatMore={() => setShowRecipeChat(true)}
       />
     );
@@ -118,8 +120,10 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
     return (
       <ChooseIngredientsScreen 
         onBack={() => setShowChooseIngredients(false)}
-        onContinue={(ingredients) => {
-          setRecipeData({ ingredients });
+        onContinue={async (ingredients) => {
+          // 调用Edamam API获取真实菜谱
+          const recipes = await fetchRecipesFromEdamam(ingredients);
+          setRecipeData({ ingredients, recipes });
           setPreviousScreen('choose-ingredients');
           setShowChooseIngredients(false);
           setShowRecipeResults(true);
