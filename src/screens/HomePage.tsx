@@ -74,6 +74,7 @@ const characters = [
       mouth: '#374151',
     },
   },
+
 ];
 
 const quickActions = [

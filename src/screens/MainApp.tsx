@@ -5,6 +5,7 @@ import ChatPage from './ChatPage';
 import CalendarPage from './CalendarPage';
 import CollectionPage from './CollectionPage';
 import BotInteractionScreen from './BotInteractionScreen';
+import { LiveAPIProvider } from '../services/gemini-live';
 
 // type TabType = 'home' | 'chat' | 'calendar' | 'collection';
 
@@ -48,41 +49,42 @@ export default function MainApp({ eatingPreference = 'unsure', cuisinePreference
   const showBottomNav = !selectedBot;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Main Content Area */}
-        <View style={styles.contentArea}>{renderCurrentTab()}</View>
-        {/* Bottom Navigation Bar */}
-        {showBottomNav && (
-          <View style={styles.bottomNavBar}>
-            <View style={styles.bottomNavRow}>
-              <TouchableOpacity
-                onPress={() => setActiveTab('home')}
-                style={[styles.navBtn, activeTab === 'home' && styles.navBtnActive]}
-                activeOpacity={0.85}
-              >
-                {/* <Home /> */}
-                <Text style={[styles.navIcon, activeTab === 'home' && styles.navIconActive]}>🏠</Text>
-                <Text style={[styles.navLabel, activeTab === 'home' && styles.navLabelActive]}>Home</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('chat')}
-                style={[styles.navBtn, activeTab === 'chat' && styles.navBtnActive]}
-                activeOpacity={0.85}
-              >
-                {/* <MessageCircle /> */}
-                <Text style={[styles.navIcon, activeTab === 'chat' && styles.navIconActive]}>💬</Text>
-                <Text style={[styles.navLabel, activeTab === 'chat' && styles.navLabelActive]}>Chat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('calendar')}
-                style={[styles.navBtn, activeTab === 'calendar' && styles.navBtnActive]}
-                activeOpacity={0.85}
-              >
-                {/* <Calendar /> */}
-                <Text style={[styles.navIcon, activeTab === 'calendar' && styles.navIconActive]}>📅</Text>
-                <Text style={[styles.navLabel, activeTab === 'calendar' && styles.navLabelActive]}>Calendar</Text>
-              </TouchableOpacity>
+    <LiveAPIProvider>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          {/* Main Content Area */}
+          <View style={styles.contentArea}>{renderCurrentTab()}</View>
+          {/* Bottom Navigation Bar */}
+          {showBottomNav && (
+            <View style={styles.bottomNavBar}>
+              <View style={styles.bottomNavRow}>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('home')}
+                  style={[styles.navBtn, activeTab === 'home' && styles.navBtnActive]}
+                  activeOpacity={0.85}
+                >
+                  {/* <Home /> */}
+                  <Text style={[styles.navIcon, activeTab === 'home' && styles.navIconActive]}>🏠</Text>
+                  <Text style={[styles.navLabel, activeTab === 'home' && styles.navLabelActive]}>Home</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('chat')}
+                  style={[styles.navBtn, activeTab === 'chat' && styles.navBtnActive]}
+                  activeOpacity={0.85}
+                >
+                  {/* <MessageCircle /> */}
+                  <Text style={[styles.navIcon, activeTab === 'chat' && styles.navIconActive]}>💬</Text>
+                  <Text style={[styles.navLabel, activeTab === 'chat' && styles.navLabelActive]}>Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('calendar')}
+                  style={[styles.navBtn, activeTab === 'calendar' && styles.navBtnActive]}
+                  activeOpacity={0.85}
+                >
+                  {/* <Calendar /> */}
+                  <Text style={[styles.navIcon, activeTab === 'calendar' && styles.navIconActive]}>📅</Text>
+                  <Text style={[styles.navLabel, activeTab === 'calendar' && styles.navLabelActive]}>Calendar</Text>
+                </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setActiveTab('collection')}
                 style={[styles.navBtn, activeTab === 'collection' && styles.navBtnActive]}
@@ -97,6 +99,7 @@ export default function MainApp({ eatingPreference = 'unsure', cuisinePreference
         )}
       </View>
     </SafeAreaView>
+    </LiveAPIProvider>
   );
 }
 

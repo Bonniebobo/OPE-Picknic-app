@@ -3,8 +3,6 @@ const path = require('path');
 
 // Configure dotenv with explicit path
 const envPath = path.resolve(__dirname, '.env');
-console.log('🔍 Looking for .env at:', envPath);
-
 const result = dotenv.config({ path: envPath });
 console.log('🔍 Dotenv result:', result.error ? `Error: ${result.error}` : 'Success');
 
@@ -20,10 +18,13 @@ const getEnvValue = (key, fallback = undefined) => {
 
 // Debug: Check if environment variables are loaded at build time
 console.log('🔧 Build time environment check:');
+console.log('GEMINI_API_KEY loaded:', !!process.env.GEMINI_API_KEY);
 console.log('EDAMAM_ID loaded:', !!process.env.EDAMAM_ID);
 console.log('EDAMAM_KEY loaded:', !!process.env.EDAMAM_KEY);
+console.log('OPENAI_API_KEY loaded:', !!process.env.OPENAI_API_KEY);
 
-export default {
+module.exports = ({ config }) => ({
+  ...config,
   expo: {
     name: "Picknic",
     slug: "picknic",
@@ -57,6 +58,7 @@ export default {
       EDAMAM_KEY: getEnvValue('EDAMAM_KEY', '2b2df14a238cb81f96340206badb35e3'), // fallback for development
       AZURE_ENDPOINT: getEnvValue('AZURE_ENDPOINT'),
       AZURE_API_KEY: getEnvValue('AZURE_API_KEY'),
+      GEMINI_API_KEY: getEnvValue('GEMINI_API_KEY'), // Added for Gemini Live API
     },
   },
-}; 
+}); 

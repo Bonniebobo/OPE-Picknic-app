@@ -47,6 +47,7 @@ const botData: any = {
       { id: 'play-with-friend', title: 'Play with a friend', description: 'Multiplayer voting game', icon: '👥', background: '#F5F3FF' },
     ],
   },
+
 };
 
 export default function BotInteractionScreen({ botId, eatingPreference, onBack }: { botId: string; eatingPreference: string; onBack: () => void }) {
@@ -58,9 +59,10 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
   const [showRecipeResults, setShowRecipeResults] = useState(false);
   const [showRecipeChat, setShowRecipeChat] = useState(false);
   const [showRecipeHelper, setShowRecipeHelper] = useState(false);
+
   const [recipeData, setRecipeData] = useState<any>(null);
 
-  // Automatically enter RecipeHelperScreen for recipe-helper bot
+  // Automatically enter specific screens based on bot type
   useEffect(() => {
     if (botId === 'recipe-helper') {
       setShowRecipeHelper(true);
@@ -99,6 +101,8 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
     );
   }
 
+
+
   if (showRecipeHelper) {
     return (
       <RecipeHelperScreen 
@@ -134,6 +138,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
       setShowRecipeHelper(true);
       return;
     }
+
     // Simulate collecting user context based on the option
     const mockContext: any = {
       'select-mood': 'cozy',

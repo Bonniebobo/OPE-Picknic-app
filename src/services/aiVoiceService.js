@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 
-const { OPENAI_API_KEY } = Constants.expoConfig.extra;
+const { OPENAI_API_KEY, GEMINI_API_KEY } = Constants.expoConfig.extra;
 
 // Mock AI voice processing service
 // In production, this would integrate with Gemini Live API or similar

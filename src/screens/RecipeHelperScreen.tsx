@@ -18,11 +18,13 @@ interface RecipeHelperScreenProps {
 }
 
 export default function RecipeHelperScreen({ onBack, onIngredientsConfirmed }: RecipeHelperScreenProps) {
-  const [activeMode, setActiveMode] = useState<Mode>('manual');
+  const [activeMode, setActiveMode] = useState<'manual' | 'ai'>('manual');
 
   const handleIngredientsConfirmed = (ingredients: string[]) => {
     onIngredientsConfirmed(ingredients);
   };
+
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
