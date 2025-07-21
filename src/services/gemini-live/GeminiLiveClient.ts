@@ -68,15 +68,22 @@ export class GeminiLiveClient extends EventEmitter<LiveClientEventTypes> {
       model,
       systemInstruction: {
         parts: [{
-          text: `You are an intelligent food assistant. When users provide audio, video, or images of ingredients, analyze them and extract a comprehensive list of ingredients you can identify. Focus on:
+          text: `You are a friendly and helpful AI cooking assistant. Please follow these guidelines:
 
-1. INGREDIENTS ONLY: Only identify actual food ingredients, not utensils, containers, or non-food items
-2. BE SPECIFIC: Use specific names (e.g., "red bell pepper" instead of just "pepper")
-3. CATEGORIZE: Classify each ingredient as vegetables, protein, staples, or seasoning
-4. BE COMPREHENSIVE: Try to identify all visible ingredients
-5. RESPOND FORMAT: Provide a JSON array of ingredients with format: [{"ingredient": "name", "category": "vegetables|protein|staples|seasoning", "confidence": 0.8}]
+1. LANGUAGE: Respond in Chinese (中文) as this is the user's preferred language
+2. CONVERSATION: Engage in natural, helpful conversations about cooking, recipes, and food
+3. INGREDIENT RECOGNITION: When users mention ingredients, acknowledge and remember them
+4. RECIPE ASSISTANCE: Help users find recipes based on their available ingredients and preferences
+5. COOKING GUIDANCE: Provide cooking tips, techniques, and answers to food-related questions
 
-When responding, be conversational but always include the structured ingredient list.`
+IMPORTANT: 
+- Always respond with TEXT ONLY, never audio
+- Always respond with actual text content, never empty responses
+- Be encouraging and helpful throughout the cooking journey
+- When users ask about recipes, provide specific suggestions and cooking tips
+- ONLY provide JSON format when explicitly requested for structured data
+
+Example response: "好的！我看到你有西红柿和鸡蛋，这是很经典的搭配。你想做西红柿炒鸡蛋吗？我可以教你几种不同的做法。"`
         }]
       },
       generationConfig: {
@@ -84,6 +91,7 @@ When responding, be conversational but always include the structured ingredient 
         topP: 0.8,
         topK: 40,
         maxOutputTokens: 8192,
+        responseModalities: ["TEXT"], // Force text-only responses
       },
       ...config
     };
@@ -157,29 +165,94 @@ When responding, be conversational but always include the structured ingredient 
 
   private async onMessage(event: MessageEvent) {
     try {
-      const message = JSON.parse(event.data);
-      this.log('server.message', message);
+      // Handle different types of data
+      const data = event.data;
+      
+      // Handle ArrayBuffer (binary data)
+      if (data instanceof ArrayBuffer) {
+        this.log('server.binaryData', `Received ArrayBuffer: ${data.byteLength} bytes`);
+        // Convert ArrayBuffer to string to check if it contains text
+        try {
+          const textDecoder = new TextDecoder();
+          const decodedText = textDecoder.decode(data);
+          this.log('server.decodedText', decodedText);
+          
+          // Try to parse as JSON
+          try {
+            const message = JSON.parse(decodedText);
+            this.log('server.message', message);
+            
+            if (message.setupComplete) {
+              this.log('server.setupComplete', 'Setup complete');
+              this.emit('setupcomplete');
+              return;
+            }
 
-      if (message.setupComplete) {
-        this.log('server.setupComplete', 'Setup complete');
-        this.emit('setupcomplete');
+            if (message.serverContent) {
+              this.handleServerContent(message.serverContent);
+            }
+
+            if (message.toolCall) {
+              this.emit('toolcall', message.toolCall);
+            }
+          } catch (jsonError) {
+            // If not JSON, treat as plain text
+            const trimmedText = decodedText.trim();
+            if (trimmedText) {
+              this.log('server.textResponse', trimmedText);
+              this.emit('textResponse', trimmedText);
+            }
+          }
+        } catch (decodeError) {
+          this.log('server.decodeError', `Failed to decode ArrayBuffer: ${decodeError}`);
+        }
         return;
       }
 
-      if (message.serverContent) {
-        this.handleServerContent(message.serverContent);
+      // Handle string data
+      if (typeof data === 'string') {
+        this.log('server.stringData', data);
+        
+        // Try to parse as JSON
+        try {
+          const message = JSON.parse(data);
+          this.log('server.message', message);
+
+          if (message.setupComplete) {
+            this.log('server.setupComplete', 'Setup complete');
+            this.emit('setupcomplete');
+            return;
+          }
+
+          if (message.serverContent) {
+            this.handleServerContent(message.serverContent);
+          }
+
+          if (message.toolCall) {
+            this.emit('toolcall', message.toolCall);
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, treat as plain text response
+          const trimmedText = data.trim();
+          if (trimmedText) {
+            this.log('server.textResponse', trimmedText);
+            this.emit('textResponse', trimmedText);
+          }
+        }
+        return;
       }
 
-      if (message.toolCall) {
-        this.emit('toolcall', message.toolCall);
-      }
+      // Handle other data types
+      this.log('server.unknownDataType', `Received unknown data type: ${typeof data}`);
 
     } catch (error) {
-      this.log('server.error', `Failed to parse message: ${error}`);
+      this.log('server.error', `Failed to handle message: ${error}`);
     }
   }
 
   private handleServerContent(serverContent: any) {
+    this.log('server.handleServerContent', serverContent);
+    
     if (serverContent.interrupted) {
       this.log('server.interrupted', 'Generation interrupted');
       this.emit('interrupted');
@@ -193,6 +266,7 @@ When responding, be conversational but always include the structured ingredient 
 
     if (serverContent.modelTurn?.parts) {
       const parts = serverContent.modelTurn.parts;
+      this.log('server.modelTurnParts', parts);
       
       // Handle audio parts
       const audioParts = parts.filter((p: any) => 
@@ -207,10 +281,20 @@ When responding, be conversational but always include the structured ingredient 
         }
       });
 
-      // Handle text parts for ingredient detection
-      const textParts = parts.filter((p: any) => p.text);
+      // Handle text parts
+      const textParts = parts.filter((p: any) => p.text && typeof p.text === 'string');
+      this.log('server.textParts', `Found ${textParts.length} text parts`);
+      
       textParts.forEach((part: any) => {
-        this.extractIngredientsFromText(part.text);
+        const textContent = part.text.trim();
+        this.log('server.textContent', textContent);
+        
+        if (textContent) {
+          // Emit text response for conversation handling
+          this.emit('textResponse', textContent);
+          // Also try to extract ingredients from text
+          this.extractIngredientsFromText(textContent);
+        }
       });
 
       this.emit('content', { modelTurn: { parts } });
@@ -286,8 +370,10 @@ When responding, be conversational but always include the structured ingredient 
   }
 
   sendTextMessage(text: string) {
+    this.log('client.sendTextMessage', `Attempting to send: ${text}`);
+    
     if (!this.websocket || this._status !== 'connected') {
-      this.log('client.error', 'Cannot send text message: not connected');
+      this.log('client.error', `Cannot send text message: not connected (status: ${this._status})`);
       return;
     }
 
@@ -298,8 +384,9 @@ When responding, be conversational but always include the structured ingredient 
       }
     };
 
+    this.log('client.textMessage', `Sending message: ${JSON.stringify(message)}`);
     this.websocket.send(JSON.stringify(message));
-    this.log('client.textMessage', text);
+    this.log('client.textMessage', `Message sent successfully`);
   }
 
   clearIngredientsHistory() {

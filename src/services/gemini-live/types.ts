@@ -25,6 +25,7 @@ export interface LiveConnectConfig {
     topP?: number;
     topK?: number;
     maxOutputTokens?: number;
+    responseModalities?: string[];
   };
 }
 
@@ -48,6 +49,7 @@ export interface LiveClientEventTypes {
   // Content events
   content: (data: any) => void;
   audio: (data: ArrayBuffer) => void;
+  textResponse: (text: string) => void;
   
   // Status events
   setupcomplete: () => void;

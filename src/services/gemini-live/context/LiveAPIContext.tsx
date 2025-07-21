@@ -51,6 +51,10 @@ interface LiveAPIContextType {
   // Text messaging
   sendTextMessage: (text: string) => void;
   
+  // Response handling
+  onTextResponse: (callback: (text: string) => void) => void;
+  offTextResponse: (callback: (text: string) => void) => void;
+  
   // Logging
   logs: StreamingLog[];
   clearLogs: () => void;
@@ -144,9 +148,14 @@ export const LiveAPIProvider: React.FC<LiveAPIProviderProps> = ({
       setDetectedIngredients(prev => [...prev, ...ingredients]);
     };
 
-    const handleLog = (log: StreamingLog) => {
-      setLogs(prev => [...prev.slice(-49), log]); // Keep last 50 logs
-    };
+      const handleLog = (log: StreamingLog) => {
+    setLogs(prev => [...prev.slice(-49), log]); // Keep last 50 logs
+  };
+
+  const handleTextResponse = (text: string) => {
+    // Emit text response for conversation handling
+    // This will be handled by the RecipeHelperAIMode component
+  };
 
     // Audio event listeners
     const handleAudioRecordingStarted = () => {
@@ -200,6 +209,7 @@ export const LiveAPIProvider: React.FC<LiveAPIProviderProps> = ({
     client.on('error', handleError);
     client.on('ingredientsDetected', handleIngredientsDetected);
     client.on('log', handleLog);
+    client.on('textResponse', handleTextResponse);
 
     audioService.on('recordingStarted', handleAudioRecordingStarted);
     audioService.on('recordingStopped', handleAudioRecordingStopped);
@@ -221,6 +231,7 @@ export const LiveAPIProvider: React.FC<LiveAPIProviderProps> = ({
       client.off('error', handleError);
       client.off('ingredientsDetected', handleIngredientsDetected);
       client.off('log', handleLog);
+      client.off('textResponse', handleTextResponse);
       client.off('audio', handleAudioResponse);
 
       audioService.off('recordingStarted', handleAudioRecordingStarted);
@@ -285,8 +296,38 @@ export const LiveAPIProvider: React.FC<LiveAPIProviderProps> = ({
   };
 
   const sendTextMessage = (text: string) => {
+    console.log('[LiveAPIContext] sendTextMessage called with:', text);
+    console.log('[LiveAPIContext] Client exists:', !!clientRef.current);
+    console.log('[LiveAPIContext] Status:', status);
+    
     if (clientRef.current && status === 'connected') {
+      console.log('[LiveAPIContext] Calling client.sendTextMessage');
       clientRef.current.sendTextMessage(text);
+    } else {
+      console.warn('[LiveAPIContext] Cannot send message - client or connection not ready');
+    }
+  };
+
+  const onTextResponse = (callback: (text: string) => void) => {
+    console.log('[LiveAPIContext] onTextResponse called');
+    console.log('[LiveAPIContext] Client exists:', !!clientRef.current);
+    
+    if (clientRef.current) {
+      console.log('[LiveAPIContext] Adding textResponse listener');
+      clientRef.current.on('textResponse', callback);
+    } else {
+      console.warn('[LiveAPIContext] Cannot add textResponse listener - client not ready');
+    }
+  };
+
+  const offTextResponse = (callback: (text: string) => void) => {
+    console.log('[LiveAPIContext] offTextResponse called');
+    
+    if (clientRef.current) {
+      console.log('[LiveAPIContext] Removing textResponse listener');
+      clientRef.current.off('textResponse', callback);
+    } else {
+      console.warn('[LiveAPIContext] Cannot remove textResponse listener - client not ready');
     }
   };
 
@@ -349,6 +390,10 @@ export const LiveAPIProvider: React.FC<LiveAPIProviderProps> = ({
     
     // Text messaging
     sendTextMessage,
+    
+    // Response handling
+    onTextResponse,
+    offTextResponse,
     
     // Logging
     logs,

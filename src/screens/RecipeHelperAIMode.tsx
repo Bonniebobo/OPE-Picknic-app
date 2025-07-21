@@ -13,6 +13,7 @@ import {
   Platform
 } from 'react-native';
 import { useLiveAPI } from '../services/gemini-live';
+import { speechService, SpeechRecognitionResult } from '../services/speechService';
 
 interface Message {
   id: string;
@@ -35,13 +36,19 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
     detectedIngredients,
     clearIngredients,
     error,
+    audioService,
+    isAudioRecording,
+    startAudioRecording,
+    stopAudioRecording,
+    onTextResponse,
+    offTextResponse,
   } = useLiveAPI();
 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       type: 'ai',
-      content: "你好！我是你的AI厨房助手。我可以帮你根据食材发现菜谱。你可以：\n\n✏️ 告诉我你有什么食材\n🎙️ 与我语音对话\n📷 拍照显示你的食材\n\n你今天有什么食材？",
+      content: "你好！我是你的AI厨房助手 👨‍🍳\n\n我可以帮你：\n• 🗣️ 语音对话 - 告诉我你有什么食材\n• 💬 文字聊天 - 描述你的烹饪需求\n• 📷 拍照识别 - 上传食材照片\n• 🍳 智能推荐 - 基于你的偏好筛选食谱\n\n今天想做什么菜？或者告诉我你有什么食材吧！",
       timestamp: new Date()
     }
   ]);
@@ -61,8 +68,49 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
       if (status === 'connected') {
         disconnect();
       }
+      // Cleanup speech service
+      speechService.cleanup();
     };
   }, []);
+
+  // Handle Gemini text responses
+  useEffect(() => {
+    const handleGeminiTextResponse = (text: string) => {
+      console.log('[RecipeHelperAIMode] Received Gemini response:', text);
+      
+      // Validate response
+      if (!text || typeof text !== 'string') {
+        console.warn('[RecipeHelperAIMode] Invalid response received:', text);
+        addMessage('ai', '抱歉，我现在无法正确响应。请重试。');
+        setIsProcessing(false);
+        return;
+      }
+
+      const trimmedText = text.trim();
+      if (trimmedText === '' || trimmedText === '[]') {
+        console.warn('[RecipeHelperAIMode] Empty response received');
+        addMessage('ai', '我还在思考中，请稍等片刻或重新提问。');
+        setIsProcessing(false);
+        return;
+      }
+
+      addMessage('ai', trimmedText);
+      setIsProcessing(false);
+    };
+
+    // Set up text response listener only once when connected
+    console.log('[RecipeHelperAIMode] Setting up text response listener, status:', status);
+    if (status === 'connected') {
+      console.log('[RecipeHelperAIMode] Adding text response listener');
+      onTextResponse(handleGeminiTextResponse);
+      
+      // Return cleanup function
+      return () => {
+        console.log('[RecipeHelperAIMode] Cleaning up text response listener');
+        offTextResponse(handleGeminiTextResponse);
+      };
+    }
+  }, [status]); // Remove onTextResponse and offTextResponse from dependencies
 
   // Update detected ingredients
   useEffect(() => {
@@ -91,10 +139,16 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
   };
 
   const addMessage = (type: 'user' | 'ai', content: string, ingredients?: string[]) => {
+    // Validate content to prevent rendering issues
+    if (!content || typeof content !== 'string') {
+      console.warn('[RecipeHelperAIMode] Invalid message content:', content);
+      return;
+    }
+
     const newMessage: Message = {
       id: Date.now().toString(),
       type,
-      content,
+      content: content.toString(), // Ensure it's a string
       timestamp: new Date(),
       ingredients
     };
@@ -116,38 +170,17 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
     setIsProcessing(true);
 
     try {
-      if (status === 'connected') {
-        // Send to Gemini Live API
-        sendTextMessage(`请帮我从这段话中识别食材：${userMessage}`);
-        
-        // Simulate AI response for now
-        setTimeout(() => {
-          const mockIngredients = extractIngredientsFromText(userMessage);
-          if (mockIngredients.length > 0) {
-            setAllIngredients(prev => {
-              const combined = [...prev, ...mockIngredients];
-              return [...new Set(combined)];
-            });
-            addMessage('ai', `我识别到了这些食材：${mockIngredients.join('、')}。${generateAIResponse(mockIngredients)}`, mockIngredients);
-          } else {
-            addMessage('ai', '我没有从你的描述中识别到具体的食材。可以试试更详细地描述一下吗？比如"我有西红柿、罗勒和奶酪"。');
-          }
-          setIsProcessing(false);
-        }, 1500);
-      } else {
-        // Fallback if not connected
-        const mockIngredients = extractIngredientsFromText(userMessage);
-        if (mockIngredients.length > 0) {
-          setAllIngredients(prev => {
-            const combined = [...prev, ...mockIngredients];
-            return [...new Set(combined)];
-          });
-          addMessage('ai', `我识别到了这些食材：${mockIngredients.join('、')}。${generateAIResponse(mockIngredients)}`, mockIngredients);
-        } else {
-          addMessage('ai', '我没有从你的描述中识别到具体的食材。可以试试更详细地描述一下吗？');
-        }
-        setIsProcessing(false);
+      // Extract ingredients locally for immediate UI feedback
+      const ingredients = extractIngredientsFromText(userMessage);
+      if (ingredients.length > 0) {
+        setAllIngredients(prev => {
+          const combined = [...prev, ...ingredients];
+          return [...new Set(combined)];
+        });
       }
+
+      // Send to Gemini for conversational response
+      await handleGeminiConversation(userMessage);
     } catch (error) {
       addMessage('ai', '抱歉，处理你的消息时出现了问题。请重试。');
       setIsProcessing(false);
@@ -188,21 +221,352 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
     return `很好！用${ingredients.join('、')}可以做出很多美味的菜肴！你对菜系类型或烹饪时间有偏好吗？`;
   };
 
-  const handleVoiceInput = () => {
-    Alert.alert('语音功能', '语音输入功能正在开发中，请暂时使用文字输入。');
+  const handleGeminiConversation = async (userInput: string) => {
+    try {
+      console.log('[RecipeHelperAIMode] handleGeminiConversation called with:', userInput);
+      console.log('[RecipeHelperAIMode] Current status:', status);
+      
+      if (status === 'connected') {
+        // Build context-aware prompt for Gemini
+        const contextPrompt = buildConversationContext(userInput);
+        console.log('[RecipeHelperAIMode] Sending context prompt to Gemini:', contextPrompt);
+        
+        // Send to Gemini Live API
+        sendTextMessage(contextPrompt);
+        console.log('[RecipeHelperAIMode] Message sent to Gemini, waiting for response...');
+        
+        // Set up timeout fallback in case Gemini doesn't respond
+        setTimeout(() => {
+          if (isProcessing) {
+            console.warn('[RecipeHelperAIMode] Gemini response timeout, using fallback');
+            const fallbackResponse = generateContextualResponse(userInput);
+            addMessage('ai', fallbackResponse);
+            setIsProcessing(false);
+          }
+        }, 8000); // 8 second timeout
+        
+        // Response will be handled by the text response listener
+      } else {
+        console.log('[RecipeHelperAIMode] Not connected to Gemini, using local processing');
+        // Fallback to local processing
+        const localResponse = generateContextualResponse(userInput);
+        addMessage('ai', localResponse);
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error('Gemini conversation error:', error);
+      addMessage('ai', '抱歉，我现在无法处理你的请求。请稍后再试。');
+      setIsProcessing(false);
+    }
+  };
+
+  const buildConversationContext = (userInput: string): string => {
+    const currentIngredients = allIngredients.length > 0 ? allIngredients.join('、') : '无';
+    const recentMessages = messages.slice(-3); // Last 3 messages for context
+    
+    let contextHistory = '';
+    recentMessages.forEach(msg => {
+      contextHistory += `${msg.type === 'user' ? '用户' : 'AI'}：${msg.content}\n`;
+    });
+    
+    return `作为一个专业的厨房助手，请基于以下上下文进行对话：
+
+当前已知食材：${currentIngredients}
+对话历史：
+${contextHistory}
+
+用户刚刚说：${userInput}
+
+请给出自然、有帮助的回应，专注于：
+1. 理解用户的食材和需求
+2. 提供烹饪建议和食谱方向
+3. 询问相关的偏好（口味、难度、时间等）
+4. 保持友好和专业的语调
+
+如果用户提到了新的食材，请确认并记住它们。`;
+  };
+
+  const generateContextualResponse = (userInput: string): string => {
+    const ingredients = extractIngredientsFromText(userInput);
+    
+    // Check if user is asking about recipes
+    if (userInput.includes('食谱') || userInput.includes('菜谱') || userInput.includes('怎么做') || userInput.includes('recipe')) {
+      if (allIngredients.length > 0) {
+        return `基于你的食材（${allIngredients.join('、')}），我可以为你推荐一些美味的菜谱！你想要什么类型的菜？比如：
+        
+🍜 汤类
+🍖 荤菜
+🥬 素菜
+🍝 面食
+🍛 米饭类
+
+或者你有其他特殊要求吗？比如烹饪时间、难度等级？`;
+      } else {
+        return '请先告诉我你有什么食材，我就能为你推荐合适的菜谱了！';
+      }
+    }
+    
+    // Check if user mentioned new ingredients
+    if (ingredients.length > 0) {
+      return `好的！我注意到你提到了：${ingredients.join('、')}。${allIngredients.length > 0 ? `加上之前的食材，现在我们有：${[...allIngredients, ...ingredients].join('、')}。` : ''}
+      
+你想做什么类型的菜？我可以根据你的偏好推荐一些食谱。`;
+    }
+    
+    // General conversational response
+    if (userInput.includes('你好') || userInput.includes('hi') || userInput.includes('hello')) {
+      return '你好！我是你的AI厨房助手。告诉我你有什么食材，我来帮你找到完美的菜谱！';
+    }
+    
+    return '我理解了。还有什么我可以帮你的吗？比如告诉我更多食材，或者说说你想要什么类型的菜？';
+  };
+
+  const handleVoiceInput = async () => {
+    try {
+      if (speechService.getRecordingStatus()) {
+        // Stop recording
+        addMessage('ai', '正在处理你的语音...');
+        setIsProcessing(true);
+        
+        const audioUri = await speechService.stopRecording();
+        if (audioUri) {
+          // Transcribe audio
+          const result: SpeechRecognitionResult = await speechService.transcribeAudio(audioUri);
+          
+          // Add user's voice message to chat
+          addMessage('user', result.transcript);
+          
+          // Extract ingredients locally for immediate UI feedback
+          if (result.ingredients.length > 0) {
+            setAllIngredients(prev => {
+              const combined = [...prev, ...result.ingredients];
+              return [...new Set(combined)];
+            });
+          }
+          
+          // Send transcribed text directly to Gemini for conversational response
+          await handleGeminiConversation(result.transcript);
+        } else {
+          addMessage('ai', '语音录制失败，请重试');
+          setIsProcessing(false);
+        }
+      } else {
+        // Start recording
+        const success = await speechService.startRecording();
+        if (success) {
+          addMessage('ai', '🎤 我在听，请说话...');
+        } else {
+          Alert.alert('错误', '无法开始录音，请检查麦克风权限');
+        }
+      }
+    } catch (error) {
+      console.error('Voice input error:', error);
+      Alert.alert('错误', '语音功能出现问题，请重试');
+      setIsProcessing(false);
+    }
   };
 
   const handlePhotoUpload = () => {
     Alert.alert('拍照功能', '拍照识别功能正在开发中，请暂时使用文字描述食材。');
   };
 
-  const handleGenerateRecipes = () => {
+  const handleGenerateRecipes = async () => {
     if (allIngredients.length === 0) {
       Alert.alert('提示', '请先告诉我一些食材信息。');
       return;
     }
     
-    onIngredientsConfirmed(allIngredients);
+    // Show loading state
+    setIsProcessing(true);
+    addMessage('ai', '正在为你寻找最合适的食谱...');
+    
+    try {
+      // Get recipes from Edamam
+      const { fetchRecipesFromEdamam } = await import('../services/edamamService');
+      const rawRecipes = await fetchRecipesFromEdamam(allIngredients);
+      
+      if (rawRecipes.length === 0) {
+        addMessage('ai', '抱歉，没有找到合适的食谱。要不要试试其他食材组合？');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Use Gemini to filter and rank recipes
+      const filteredRecipes = await filterRecipesWithGemini(rawRecipes, allIngredients);
+      
+      // Show Gemini's recommendations
+      const recommendationMessage = generateRecipeRecommendationMessage(filteredRecipes);
+      addMessage('ai', recommendationMessage);
+      
+      setIsProcessing(false);
+      
+      // Proceed with the filtered recipes
+      onIngredientsConfirmed(allIngredients);
+    } catch (error) {
+      console.error('Recipe generation error:', error);
+      addMessage('ai', '抱歉，获取食谱时出现了问题。让我们直接使用你的食材继续。');
+      setIsProcessing(false);
+      onIngredientsConfirmed(allIngredients);
+    }
+  };
+
+  const filterRecipesWithGemini = async (recipes: any[], ingredients: string[]): Promise<any[]> => {
+    try {
+      if (status === 'connected') {
+        // Build context for Gemini recipe filtering
+        const filteringPrompt = buildRecipeFilteringPrompt(recipes, ingredients);
+        
+        // Send to Gemini and wait for response
+        return new Promise((resolve) => {
+          const handleFilteringResponse = (text: string) => {
+            try {
+              // Try to parse JSON response
+              const jsonMatch = text.match(/\{.*\}/s);
+              if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                if (parsed.recommendations && Array.isArray(parsed.recommendations)) {
+                  // Convert Gemini recommendations back to recipe format
+                  const filteredRecipes = parsed.recommendations.map((rec: any) => {
+                    const originalRecipe = recipes.find(r => r.name === rec.name) || recipes[rec.rank - 1];
+                    return {
+                      ...originalRecipe,
+                      geminiReason: rec.reason
+                    };
+                  });
+                  resolve(filteredRecipes);
+                  return;
+                }
+              }
+              
+              // Fallback to local filtering if JSON parsing fails
+              resolve(simulateGeminiFiltering(recipes, ingredients));
+            } catch (error) {
+              console.error('Failed to parse Gemini filtering response:', error);
+              resolve(simulateGeminiFiltering(recipes, ingredients));
+            } finally {
+              offTextResponse(handleFilteringResponse);
+            }
+          };
+          
+          onTextResponse(handleFilteringResponse);
+          sendTextMessage(filteringPrompt);
+          
+          // Timeout fallback
+          setTimeout(() => {
+            offTextResponse(handleFilteringResponse);
+            resolve(simulateGeminiFiltering(recipes, ingredients));
+          }, 10000);
+        });
+      } else {
+        // Fallback to local filtering
+        return simulateGeminiFiltering(recipes, ingredients);
+      }
+    } catch (error) {
+      console.error('Recipe filtering error:', error);
+      return recipes.slice(0, 5); // Return top 5 as fallback
+    }
+  };
+
+  const buildRecipeFilteringPrompt = (recipes: any[], ingredients: string[]): string => {
+    const recipeList = recipes.slice(0, 10).map((recipe, index) => 
+      `${index + 1}. ${recipe.name} - ${recipe.description || '美味食谱'}`
+    ).join('\n');
+    
+    const conversationContext = messages.slice(-5).map(msg => 
+      `${msg.type === 'user' ? '用户' : 'AI'}：${msg.content}`
+    ).join('\n');
+    
+    return `作为专业厨房助手，请根据以下信息为用户推荐最合适的5个食谱：
+
+用户食材：${ingredients.join('、')}
+
+对话上下文：
+${conversationContext}
+
+候选食谱：
+${recipeList}
+
+请基于以下标准进行筛选和排序：
+1. 食材匹配度（优先使用用户现有食材）
+2. 用户在对话中表达的偏好（口味、难度、时间等）
+3. 营养均衡性
+4. 制作难度适中
+5. 受欢迎程度
+
+请以JSON格式返回排序后的前5个食谱，格式如下：
+{
+  "recommendations": [
+    {
+      "rank": 1,
+      "name": "食谱名称",
+      "reason": "推荐理由"
+    }
+  ],
+  "summary": "总结性的推荐说明"
+}
+
+请确保返回的是有效的JSON格式。`;
+  };
+
+  const simulateGeminiFiltering = (recipes: any[], ingredients: string[]) => {
+    // Simulate intelligent filtering based on conversation context
+    const scored = recipes.map(recipe => {
+      let score = 0;
+      
+      // Score based on ingredient match
+      const recipeIngredients = recipe.ingredients || [];
+      const matchCount = ingredients.filter(ing => 
+        recipeIngredients.some((recipeIng: string) => 
+          recipeIng.toLowerCase().includes(ing.toLowerCase()) ||
+          ing.toLowerCase().includes(recipeIng.toLowerCase())
+        )
+      ).length;
+      score += matchCount * 10;
+      
+      // Score based on difficulty preference (prefer easy to medium)
+      if (recipe.difficulty === 'Easy') score += 5;
+      else if (recipe.difficulty === 'Medium') score += 3;
+      
+      // Score based on cooking time (prefer shorter times)
+      const cookTimeMatch = recipe.cookTime?.match(/(\d+)/);
+      if (cookTimeMatch) {
+        const minutes = parseInt(cookTimeMatch[1]);
+        if (minutes <= 30) score += 5;
+        else if (minutes <= 60) score += 3;
+      }
+      
+      // Random factor for variety
+      score += Math.random() * 2;
+      
+      return { ...recipe, score };
+    });
+    
+    // Sort by score and return top 5
+    return scored.sort((a, b) => b.score - a.score).slice(0, 5);
+  };
+
+  const generateRecipeRecommendationMessage = (recipes: any[]): string => {
+    if (recipes.length === 0) {
+      return '抱歉，没有找到合适的食谱。';
+    }
+    
+    let message = `太好了！基于你的食材和偏好，我为你精选了${recipes.length}个食谱：\n\n`;
+    
+    recipes.forEach((recipe, index) => {
+      message += `${index + 1}. **${recipe.name}**\n`;
+      message += `   ⏱️ ${recipe.cookTime || '30分钟'} | 🔥 ${recipe.difficulty || 'Medium'}\n`;
+      
+      // Use Gemini's reason if available, otherwise use description
+      if (recipe.geminiReason) {
+        message += `   💡 ${recipe.geminiReason}\n\n`;
+      } else {
+        message += `   ${recipe.description || '美味可口的家常菜'}\n\n`;
+      }
+    });
+    
+    message += '这些食谱都很适合你的食材搭配！准备好开始烹饪了吗？';
+    
+    return message;
   };
 
   const renderConnectionStatus = () => {
@@ -293,8 +657,16 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
       {/* Input Controls */}
       <View style={styles.inputContainer}>
         <View style={styles.inputRow}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleVoiceInput}>
-            <Text style={styles.actionButtonText}>🎤</Text>
+          <TouchableOpacity 
+            style={[
+              styles.actionButton, 
+              speechService.getRecordingStatus() && styles.actionButtonActive
+            ]} 
+            onPress={handleVoiceInput}
+          >
+            <Text style={styles.actionButtonText}>
+              {speechService.getRecordingStatus() ? '⏹️' : '🎤'}
+            </Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={handlePhotoUpload}>
@@ -445,6 +817,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
+  },
+  actionButtonActive: {
+    backgroundColor: '#FB7185',
+    shadowColor: '#FB7185',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   actionButtonText: {
     fontSize: 18,
