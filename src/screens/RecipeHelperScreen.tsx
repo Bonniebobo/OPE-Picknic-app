@@ -15,9 +15,11 @@ type Mode = 'manual' | 'ai';
 interface RecipeHelperScreenProps {
   onBack: () => void;
   onIngredientsConfirmed: (ingredients: string[]) => void;
+  eatingPreference?: string;
+  navigation?: any;
 }
 
-export default function RecipeHelperScreen({ onBack, onIngredientsConfirmed }: RecipeHelperScreenProps) {
+export default function RecipeHelperScreen({ onBack, onIngredientsConfirmed, eatingPreference, navigation }: RecipeHelperScreenProps) {
   const [activeMode, setActiveMode] = useState<'manual' | 'ai'>('manual');
 
   const handleIngredientsConfirmed = (ingredients: string[]) => {
@@ -79,7 +81,10 @@ export default function RecipeHelperScreen({ onBack, onIngredientsConfirmed }: R
           {activeMode === 'manual' ? (
             <ManualInputMode onIngredientsConfirmed={handleIngredientsConfirmed} />
           ) : (
-            <AIAssistantMode onIngredientsConfirmed={handleIngredientsConfirmed} />
+            <AIAssistantMode 
+              onIngredientsConfirmed={handleIngredientsConfirmed} 
+              navigation={navigation}
+            />
           )}
         </View>
       </View>

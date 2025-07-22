@@ -1,13 +1,23 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import AppFlowV3 from './src/screens/AppFlow';
+import { IngredientProvider } from './src/context/IngredientContext';
+import { ToCookListProvider } from './src/context/ToCookListContext';
+import { MenuPlanningProvider } from './src/context/MenuPlanningContext';
+import { LiveAPIProvider } from './src/services/gemini-live/context/LiveAPIContext';
 
 export default function App() {
   return (
-    <>
-      <StatusBar style="auto" />
-      <AppFlowV3 />
-    </>
+    <LiveAPIProvider>
+      <IngredientProvider>
+        <ToCookListProvider>
+          <MenuPlanningProvider>
+            <StatusBar style="auto" />
+            <AppFlowV3 />
+          </MenuPlanningProvider>
+        </ToCookListProvider>
+      </IngredientProvider>
+    </LiveAPIProvider>
   );
 }
 // import { StatusBar } from 'expo-status-bar';

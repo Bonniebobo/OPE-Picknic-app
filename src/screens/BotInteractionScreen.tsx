@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-import RecipeHelperScreen from './RecipeHelperScreen';
+import UnifiedRecipeHelperScreen from './UnifiedRecipeHelperScreen';
 import RecipeResultsScreen from './RecipeResultsScreen';
 import RecipeChatBoxScreen from './RecipeChatBoxScreen';
+import { TodoListScreen } from './TodoListScreen';
+import { RecipeDetailScreen } from './RecipeDetailScreen';
 import { fetchRecipesFromEdamam } from '../services/edamamService';
+import { RecipeCard } from '../types/recipe';
 
 const botData: any = {
   'mood-matcher': {
@@ -59,8 +62,36 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
   const [showRecipeResults, setShowRecipeResults] = useState(false);
   const [showRecipeChat, setShowRecipeChat] = useState(false);
   const [showRecipeHelper, setShowRecipeHelper] = useState(false);
+  const [showTodoList, setShowTodoList] = useState(false);
+  const [showRecipeDetail, setShowRecipeDetail] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeCard | null>(null);
 
   const [recipeData, setRecipeData] = useState<any>(null);
+
+  // Simple navigation manager for the bot interaction
+  const navigation = {
+    navigate: (screen: string, params?: any) => {
+      switch (screen) {
+        case 'TodoList':
+          setShowTodoList(true);
+          break;
+        case 'RecipeDetail':
+          setSelectedRecipe(params?.recipe || null);
+          setShowRecipeDetail(true);
+          break;
+        default:
+          console.warn(`Unknown screen: ${screen}`);
+      }
+    },
+    goBack: () => {
+      if (showRecipeDetail) {
+        setShowRecipeDetail(false);
+        setSelectedRecipe(null);
+      } else if (showTodoList) {
+        setShowTodoList(false);
+      }
+    }
+  };
 
   // Automatically enter specific screens based on bot type
   useEffect(() => {
@@ -70,6 +101,23 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
   }, [botId]);
 
   const bot = botData[botId as keyof typeof botData];
+
+  // Handle TodoList screen
+  if (showTodoList) {
+    return (
+      <TodoListScreen navigation={navigation} />
+    );
+  }
+
+  // Handle RecipeDetail screen
+  if (showRecipeDetail && selectedRecipe) {
+    return (
+      <RecipeDetailScreen 
+        route={{ params: { recipe: selectedRecipe } }}
+        navigation={navigation}
+      />
+    );
+  }
 
   if (showRecipeChat) {
     return (
@@ -105,21 +153,9 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
 
   if (showRecipeHelper) {
     return (
-      <RecipeHelperScreen 
+      <UnifiedRecipeHelperScreen 
         onBack={onBack}
-        onIngredientsConfirmed={async (ingredients) => {
-          console.log('🔄 Processing ingredients:', ingredients);
-          try {
-            // Fetch recipes using the confirmed ingredients
-            const recipes = await fetchRecipesFromEdamam(ingredients);
-            console.log('✅ Recipes fetched, navigating to results');
-            setRecipeData({ ingredients, recipes });
-            setShowRecipeHelper(false);
-            setShowRecipeResults(true);
-          } catch (error) {
-            console.error('❌ Error fetching recipes:', error);
-          }
-        }}
+        navigation={navigation}
       />
     );
   }

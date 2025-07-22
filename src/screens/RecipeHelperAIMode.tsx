@@ -14,6 +14,9 @@ import {
 } from 'react-native';
 import { useLiveAPI } from '../services/gemini-live';
 import { speechService, SpeechRecognitionResult } from '../services/speechService';
+import { RecipeCard } from '../components/RecipeCard';
+import { RecipeCard as RecipeCardType } from '../types/recipe';
+import { createMockRecipeCards, parseGeminiRecipeResponse } from '../utils/recipeUtils';
 
 interface Message {
   id: string;
@@ -21,13 +24,15 @@ interface Message {
   content: string;
   timestamp: Date;
   ingredients?: string[];
+  recipes?: RecipeCardType[];
 }
 
 interface RecipeHelperAIModeProps {
   onIngredientsConfirmed: (ingredients: string[]) => void;
+  navigation?: any;
 }
 
-export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHelperAIModeProps) {
+export default function RecipeHelperAIMode({ onIngredientsConfirmed, navigation }: RecipeHelperAIModeProps) {
   const {
     status,
     connect,
@@ -48,7 +53,7 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
     {
       id: '1',
       type: 'ai',
-      content: "你好！我是你的AI厨房助手 👨‍🍳\n\n我可以帮你：\n• 🗣️ 语音对话 - 告诉我你有什么食材\n• 💬 文字聊天 - 描述你的烹饪需求\n• 📷 拍照识别 - 上传食材照片\n• 🍳 智能推荐 - 基于你的偏好筛选食谱\n\n今天想做什么菜？或者告诉我你有什么食材吧！",
+      content: "Hello! I'm your AI kitchen assistant 👨‍🍳\n\nI can help you with:\n• 🗣️ Voice chat - Tell me what ingredients you have\n• 💬 Text chat - Describe your cooking needs\n• 📷 Photo recognition - Upload ingredient photos\n• 🍳 Smart recommendations - Filter recipes based on your preferences\n\nWhat would you like to cook today? Or tell me what ingredients you have, and I can recommend some delicious recipes for you!",
       timestamp: new Date()
     }
   ]);
@@ -57,6 +62,24 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
   const [isConnecting, setIsConnecting] = useState(false);
   const [allIngredients, setAllIngredients] = useState<string[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [currentAIMessage, setCurrentAIMessage] = useState<string>('');
+  const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
+  const responseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle recipe card interactions
+  const handleViewRecipeDetails = (recipe: RecipeCardType) => {
+    if (navigation) {
+      navigation.navigate('RecipeDetail', { recipe });
+    } else {
+      Alert.alert('菜谱详情', `${recipe.name}\n\n${recipe.instructions}`);
+    }
+  };
+
+  const handleViewTodoList = () => {
+    if (navigation) {
+      navigation.navigate('TodoList');
+    }
+  };
 
   // Auto-connect on mount
   useEffect(() => {
@@ -76,25 +99,91 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
   // Handle Gemini text responses
   useEffect(() => {
     const handleGeminiTextResponse = (text: string) => {
-      console.log('[RecipeHelperAIMode] Received Gemini response:', text);
+      console.log('[RecipeHelperAIMode] Received Gemini response chunk:', text);
       
       // Validate response
       if (!text || typeof text !== 'string') {
         console.warn('[RecipeHelperAIMode] Invalid response received:', text);
-        addMessage('ai', '抱歉，我现在无法正确响应。请重试。');
-        setIsProcessing(false);
         return;
       }
 
       const trimmedText = text.trim();
       if (trimmedText === '' || trimmedText === '[]') {
-        console.warn('[RecipeHelperAIMode] Empty response received');
-        addMessage('ai', '我还在思考中，请稍等片刻或重新提问。');
-        setIsProcessing(false);
         return;
       }
 
-      addMessage('ai', trimmedText);
+      // Clear existing timeout
+      if (responseTimeoutRef.current) {
+        clearTimeout(responseTimeoutRef.current);
+      }
+
+      // Accumulate the AI response
+      setCurrentAIMessage(prev => {
+        const newMessage = prev + trimmedText;
+        console.log('[RecipeHelperAIMode] Accumulated message:', newMessage);
+        
+        // Update existing message or create new one
+        if (currentMessageId) {
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              msg.id === currentMessageId 
+                ? { ...msg, content: newMessage }
+                : msg
+            )
+          );
+        } else {
+          const messageId = Date.now().toString();
+          setCurrentMessageId(messageId);
+          const newMsg: Message = {
+            id: messageId,
+            type: 'ai',
+            content: newMessage,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, newMsg]);
+        }
+        
+        // Set timeout to detect end of response
+        responseTimeoutRef.current = setTimeout(() => {
+          handleTurnComplete(newMessage);
+        }, 1500); // Wait 1.5 seconds after last chunk
+        
+        return newMessage;
+      });
+    };
+
+    const handleTurnComplete = (finalMessage?: string) => {
+      const messageToProcess = finalMessage || currentAIMessage;
+      console.log('[RecipeHelperAIMode] Turn complete, processing final message:', messageToProcess);
+      
+      if (messageToProcess.trim()) {
+        // Parse the complete response for recipe recommendations
+        const parsedResponse = parseGeminiRecipeResponse(messageToProcess);
+        
+        // Check if we should generate recipe cards
+        const shouldShowRecipes = /推荐|菜谱|食谱|制作|烹饪|做法|菜|recipe|建议|可以做|试试|怎么做|什么菜|土豆烧鸡块|咖喱鸡肉土豆|小鸡炖蘑菇/i.test(messageToProcess);
+        
+        console.log('[RecipeHelperAIMode] Should show recipes:', shouldShowRecipes);
+        
+        if (shouldShowRecipes) {
+          const mockRecipes = createMockRecipeCards(allIngredients);
+          console.log('[RecipeHelperAIMode] Generated mock recipes:', mockRecipes.length);
+          
+          if (mockRecipes.length > 0 && currentMessageId) {
+            setMessages(prevMessages => 
+              prevMessages.map(msg => 
+                msg.id === currentMessageId 
+                  ? { ...msg, content: messageToProcess, recipes: mockRecipes }
+                  : msg
+              )
+            );
+          }
+        }
+      }
+      
+      // Reset for next turn
+      setCurrentAIMessage('');
+      setCurrentMessageId(null);
       setIsProcessing(false);
     };
 
@@ -110,7 +199,7 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
         offTextResponse(handleGeminiTextResponse);
       };
     }
-  }, [status]); // Remove onTextResponse and offTextResponse from dependencies
+  }, [status]); // Keep simple dependencies
 
   // Update detected ingredients
   useEffect(() => {
@@ -138,7 +227,7 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
     }
   };
 
-  const addMessage = (type: 'user' | 'ai', content: string, ingredients?: string[]) => {
+  const addMessage = (type: 'user' | 'ai', content: string, ingredients?: string[], recipes?: RecipeCardType[]) => {
     // Validate content to prevent rendering issues
     if (!content || typeof content !== 'string') {
       console.warn('[RecipeHelperAIMode] Invalid message content:', content);
@@ -150,7 +239,8 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed }: RecipeHel
       type,
       content: content.toString(), // Ensure it's a string
       timestamp: new Date(),
-      ingredients
+      ingredients,
+      recipes
     };
     
     setMessages(prev => [...prev, newMessage]);
@@ -607,6 +697,16 @@ ${recipeList}
     >
       {renderConnectionStatus()}
       
+      {/* Todo List Button */}
+      {navigation && (
+        <TouchableOpacity 
+          style={styles.todoListButton}
+          onPress={handleViewTodoList}
+        >
+          <Text style={styles.todoListButtonText}>📝 待做清单</Text>
+        </TouchableOpacity>
+      )}
+      
       {/* Chat Messages */}
       <ScrollView
         ref={scrollViewRef}
@@ -615,20 +715,34 @@ ${recipeList}
         keyboardShouldPersistTaps="handled"
       >
         {messages.map((message) => (
-          <View
-            key={message.id}
-            style={[
-              styles.messageBubble,
-              message.type === 'user' ? styles.userBubble : styles.aiBubble,
-            ]}
-          >
-            <Text style={styles.messageText}>{message.content}</Text>
-            <Text style={styles.messageTime}>
-              {message.timestamp.toLocaleTimeString('zh-CN', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })}
-            </Text>
+          <View key={message.id}>
+            <View
+              style={[
+                styles.messageBubble,
+                message.type === 'user' ? styles.userBubble : styles.aiBubble,
+              ]}
+            >
+              <Text style={styles.messageText}>{message.content}</Text>
+              <Text style={styles.messageTime}>
+                {message.timestamp.toLocaleTimeString('zh-CN', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </Text>
+            </View>
+            
+            {/* Render recipe cards if present */}
+            {message.recipes && message.recipes.length > 0 && (
+              <View style={styles.recipesContainer}>
+                {message.recipes.map((recipe) => (
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    onViewDetails={handleViewRecipeDetails}
+                  />
+                ))}
+              </View>
+            )}
           </View>
         ))}
         
@@ -693,6 +807,17 @@ ${recipeList}
             <Text style={styles.sendButtonText}>发送</Text>
           </TouchableOpacity>
         </View>
+        
+        <TouchableOpacity 
+          style={styles.testButton}
+          onPress={() => {
+            const mockRecipes = createMockRecipeCards(allIngredients);
+            console.log('[RecipeHelperAIMode] Test button clicked, generated recipes:', mockRecipes.length);
+            addMessage('ai', '🍳 以下是为您推荐的菜谱：', undefined, mockRecipes);
+          }}
+        >
+          <Text style={styles.testButtonText}>🍳 测试菜谱卡片</Text>
+        </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.generateButton, allIngredients.length === 0 && styles.generateButtonDisabled]}
@@ -874,5 +999,35 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  recipesContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  todoListButton: {
+    backgroundColor: '#007bff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'center',
+    marginVertical: 8,
+  },
+  todoListButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  testButton: {
+    backgroundColor: '#ff6b6b',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 
