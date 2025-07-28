@@ -41,6 +41,9 @@ export default function IngredientInputSection({
   
   const [inputText, setInputText] = useState('');
   const [inputMode, setInputMode] = useState<'manual' | 'voice' | 'camera'>('manual');
+  
+  // Common ingredients collapsible state
+  const [commonIngredientsExpanded, setCommonIngredientsExpanded] = useState(false);
 
   // Photo recognition state
   const [showPhotoRecognition, setShowPhotoRecognition] = useState(false);
@@ -269,25 +272,10 @@ export default function IngredientInputSection({
     // Close photo recognition and navigate to menu planning
     setShowPhotoRecognition(false);
     
-    if (ingredientsToAdd.length > 0) {
-      Alert.alert(
-        'Ingredients Added!', 
-        `Added ${ingredientsToAdd.length} ingredients. Starting menu planning...`,
-        [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              // Small delay to ensure state updates
-              setTimeout(() => {
-                onStartPlanning();
-              }, 100);
-            }
-          }
-        ]
-      );
-    } else {
+    // Small delay to ensure state updates, then start planning directly
+    setTimeout(() => {
       onStartPlanning();
-    }
+    }, 100);
   };
 
   const handleCancelRecognition = () => {
@@ -350,32 +338,50 @@ export default function IngredientInputSection({
 
   const renderCommonIngredients = () => (
     <View style={styles.commonIngredients}>
-      <Text style={styles.sectionTitle}>🥬 Common Ingredients</Text>
-      {Object.entries(commonIngredients).map(([category, items]) => (
-        <View key={category} style={styles.categorySection}>
-          <Text style={styles.categoryTitle}>{category}</Text>
-          <View style={styles.ingredientTags}>
-            {items.map((ingredient) => (
-              <TouchableOpacity
-                key={ingredient}
-                style={[
-                  styles.ingredientTag,
-                  ingredients.some(ing => ing.name === ingredient) && styles.ingredientTagSelected
-                ]}
-                onPress={() => handleQuickAdd(ingredient)}
-                disabled={ingredients.some(ing => ing.name === ingredient)}
-              >
-                <Text style={[
-                  styles.ingredientTagText,
-                  ingredients.some(ing => ing.name === ingredient) && styles.ingredientTagTextSelected
-                ]}>
-                  {ingredient}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <TouchableOpacity 
+        style={styles.collapsibleHeader}
+        onPress={() => setCommonIngredientsExpanded(!commonIngredientsExpanded)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.sectionTitle}>
+          🥬 Common Ingredients
+        </Text>
+        <View style={styles.expandIconContainer}>
+          <Text style={styles.expandIcon}>
+            {commonIngredientsExpanded ? '🔼' : '🔽'}
+          </Text>
         </View>
-      ))}
+      </TouchableOpacity>
+      
+      {commonIngredientsExpanded && (
+        <View style={styles.collapsibleContent}>
+          {Object.entries(commonIngredients).map(([category, items]) => (
+            <View key={category} style={styles.categorySection}>
+              <Text style={styles.categoryTitle}>{category}</Text>
+              <View style={styles.ingredientTags}>
+                {items.map((ingredient) => (
+                  <TouchableOpacity
+                    key={ingredient}
+                    style={[
+                      styles.ingredientTag,
+                      ingredients.some(ing => ing.name === ingredient) && styles.ingredientTagSelected
+                    ]}
+                    onPress={() => handleQuickAdd(ingredient)}
+                    disabled={ingredients.some(ing => ing.name === ingredient)}
+                  >
+                    <Text style={[
+                      styles.ingredientTagText,
+                      ingredients.some(ing => ing.name === ingredient) && styles.ingredientTagTextSelected
+                    ]}>
+                      {ingredient}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 
@@ -499,72 +505,85 @@ export default function IngredientInputSection({
                     <View style={styles.photoResultHeader}>
                       <Text style={styles.photoResultTitle}>🍽️ Dish Recognized</Text>
                       <Text style={styles.photoResultDish}>{recognitionResult.dishName}</Text>
-                      <Text style={styles.photoResultSubtitle}>Ingredients in this dish:</Text>
+                      <Text style={styles.photoResultSubtitle}>Ingredients identified:</Text>
                     </View>
                   ) : (
                     <View style={styles.photoResultHeader}>
                       <Text style={styles.photoResultTitle}>🥬 Ingredients Recognized</Text>
-                      <Text style={styles.photoResultSubtitle}>Tap to edit, swipe to remove:</Text>
+                      <Text style={styles.photoResultSubtitle}>You can edit or remove ingredients:</Text>
                     </View>
                   )}
 
-                  {/* Editable Chips */}
-                  <View style={styles.recognizedChips}>
-                    {recognizedItems.map((item) => (
-                      <View key={item.id} style={[
-                        styles.recognizedChip,
-                        item.type === 'dish' && styles.recognizedChipDish
-                      ]}>
+                  {/* Ingredient List */}
+                  <View style={styles.ingredientListView}>
+                    {recognizedItems.filter(item => item.type === 'ingredient').map((item, index) => (
+                      <View key={item.id} style={styles.ingredientRow}>
+                        <Text style={styles.ingredientNumber}>{index + 1}.</Text>
                         {item.isEditing ? (
-                          <View style={styles.chipEditContainer}>
+                          <View style={styles.ingredientEditContainer}>
                             <TextInput
-                              style={styles.chipEditInput}
+                              style={styles.ingredientEditInput}
                               value={item.editValue}
                               onChangeText={(text) => handleUpdateEditValue(item.id, text)}
                               onSubmitEditing={() => handleSaveEdit(item.id)}
                               autoFocus
                             />
                             <TouchableOpacity 
-                              style={styles.chipEditSaveButton}
+                              style={styles.ingredientSaveButton}
                               onPress={() => handleSaveEdit(item.id)}
                             >
-                              <Text style={styles.chipEditSaveText}>✓</Text>
+                              <Text style={styles.ingredientSaveText}>✓</Text>
                             </TouchableOpacity>
                             <TouchableOpacity 
-                              style={styles.chipEditCancelButton}
+                              style={styles.ingredientCancelButton}
                               onPress={() => handleCancelEdit(item.id)}
                             >
-                              <Text style={styles.chipEditCancelText}>✕</Text>
+                              <Text style={styles.ingredientCancelText}>✕</Text>
                             </TouchableOpacity>
                           </View>
                         ) : (
-                          <View style={styles.chipDisplayContainer}>
-                            <Text style={[
-                              styles.chipText,
-                              item.type === 'dish' && styles.chipTextDish
-                            ]}>
-                              {item.name}
-                            </Text>
-                            {item.type === 'ingredient' && (
-                              <>
-                                <TouchableOpacity 
-                                  style={styles.chipEditButton}
-                                  onPress={() => handleEditItem(item.id)}
-                                >
-                                  <Text style={styles.chipEditButtonText}>✎</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity 
-                                  style={styles.chipDeleteButton}
-                                  onPress={() => handleDeleteItem(item.id)}
-                                >
-                                  <Text style={styles.chipDeleteButtonText}>×</Text>
-                                </TouchableOpacity>
-                              </>
-                            )}
+                          <View style={styles.ingredientDisplayContainer}>
+                            <Text style={styles.ingredientNameText}>{item.name}</Text>
+                            <TouchableOpacity 
+                              style={styles.ingredientEditButton}
+                              onPress={() => handleEditItem(item.id)}
+                            >
+                              <Text style={styles.ingredientEditButtonText}>✎</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={styles.ingredientDeleteButton}
+                              onPress={() => handleDeleteItem(item.id)}
+                            >
+                              <Text style={styles.ingredientDeleteButtonText}>×</Text>
+                            </TouchableOpacity>
                           </View>
                         )}
                       </View>
                     ))}
+                  </View>
+
+                  {/* Action Buttons */}
+                  <View style={styles.photoActionButtons}>
+                    <TouchableOpacity 
+                      style={styles.photoSecondaryButton}
+                      onPress={handleRetakePhoto}
+                    >
+                      <Text style={styles.photoSecondaryButtonText}>📷 Take Another Photo</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.photoDeleteButton}
+                      onPress={handleCancelRecognition}
+                    >
+                      <Text style={styles.photoDeleteButtonText}>🗑️ Delete & Start Over</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.photoNextButton}
+                      onPress={handleConfirmRecognition}
+                    >
+                      <Text style={styles.photoNextButtonText}>➡️ Next Step</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               ) : (
@@ -578,20 +597,6 @@ export default function IngredientInputSection({
             </View>
           )}
         </ScrollView>
-
-        {/* Actions */}
-        {hasImage && !isProcessingImage && recognizedItems.length > 0 && (
-          <View style={styles.photoModalActions}>
-            <TouchableOpacity 
-              style={styles.photoConfirmButton}
-              onPress={handleConfirmRecognition}
-            >
-              <Text style={styles.photoConfirmButtonText}>
-                ✅ Add Ingredients & Start Planning
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -732,6 +737,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  expandIconContainer: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: '#e3f2fd',
+  },
+  expandIcon: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1976d2',
+  },
+  collapsibleContent: {
+    marginTop: 8,
   },
   categorySection: {
     marginBottom: 16,
@@ -1145,5 +1173,142 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#3B82F6',
     textDecorationLine: 'underline',
+  },
+  // New ingredient list styles for photo recognition
+  ingredientListView: {
+    marginVertical: 10,
+  },
+  ingredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    backgroundColor: '#F9FAFB',
+    marginVertical: 2,
+    borderRadius: 8,
+  },
+  ingredientNumber: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#6B7280',
+    marginRight: 12,
+    minWidth: 24,
+  },
+  ingredientEditContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  ingredientEditInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1F2937',
+    paddingVertical: 0,
+  },
+  ingredientSaveButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+    marginLeft: 8,
+  },
+  ingredientSaveText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  ingredientCancelButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    marginLeft: 4,
+  },
+  ingredientCancelText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  ingredientDisplayContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ingredientNameText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  ingredientEditButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#E0E7FF',
+    marginLeft: 8,
+  },
+  ingredientEditButtonText: {
+    fontSize: 12,
+    color: '#3B82F6',
+  },
+  ingredientDeleteButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#FEE2E2',
+    marginLeft: 4,
+  },
+  ingredientDeleteButtonText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: 'bold',
+  },
+  // Photo action buttons
+  photoActionButtons: {
+    marginTop: 20,
+    gap: 12,
+  },
+  photoSecondaryButton: {
+    backgroundColor: '#E0E7FF',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  photoSecondaryButtonText: {
+    fontSize: 14,
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  photoDeleteButton: {
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  photoDeleteButtonText: {
+    fontSize: 14,
+    color: '#EF4444',
+    fontWeight: '600',
+  },
+  photoNextButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  photoNextButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
 });

@@ -1,5 +1,6 @@
 import { RecommendedRecipe, ParsedRecommendationResult, RecipeCard } from '../types/recipe';
 import Constants from 'expo-constants';
+import { generateRecipeImageUrl } from '../services/geminiImageAnalysis';
 
 const { EDAMAM_ID, EDAMAM_KEY } = Constants.expoConfig?.extra || {};
 
@@ -10,53 +11,22 @@ const { EDAMAM_ID, EDAMAM_KEY } = Constants.expoConfig?.extra || {};
  */
 
 /**
- * Try to fetch real recipe image from Edamam API
+ * Try to generate recipe image using Gemini AI
  */
-async function tryFetchRealRecipeImage(recipeName: string): Promise<string | null> {
+async function tryGenerateRecipeImage(recipeName: string, description?: string): Promise<string | null> {
   try {
-    if (!EDAMAM_ID || !EDAMAM_KEY) {
-      console.log('[ImageFetch] Edamam credentials not available');
-      return null;
-    }
-
-    console.log('[ImageFetch] Searching for recipe image:', recipeName);
+    console.log('[ImageGeneration] Generating AI image for recipe:', recipeName);
     
-    const queryParams = new URLSearchParams({
-      q: recipeName,
-      type: 'public',
-      app_id: EDAMAM_ID,
-      app_key: EDAMAM_KEY,
-      from: '0',
-      to: '1', // Only need the first result
-    });
-
-    const url = `https://api.edamam.com/api/recipes/v2?${queryParams.toString()}`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Edamam-Account-User': 'picknic-user-123',
-      },
-    });
-
-    if (!response.ok) {
-      console.log('[ImageFetch] Edamam API request failed:', response.status);
-      return null;
-    }
-
-    const data = await response.json();
-    
-    if (data.hits && data.hits.length > 0 && data.hits[0].recipe.image) {
-      const imageUrl = data.hits[0].recipe.image;
-      console.log('[ImageFetch] Found real recipe image:', imageUrl);
+    const imageUrl = await generateRecipeImageUrl(recipeName, description);
+    if (imageUrl) {
+      console.log('[ImageGeneration] Successfully generated AI image for:', recipeName);
       return imageUrl;
     }
     
-    console.log('[ImageFetch] No image found for recipe:', recipeName);
+    console.log('[ImageGeneration] Failed to generate AI image for:', recipeName);
     return null;
   } catch (error) {
-    console.error('[ImageFetch] Error fetching recipe image:', error);
+    console.error('[ImageGeneration] Error generating AI image:', error);
     return null;
   }
 }
@@ -280,7 +250,7 @@ function extractProperty(text: string, propertyNames: string[]): string | undefi
 
 /**
  * Convert RecommendedRecipe to RecipeCard format (for backward compatibility)
- * Now tries to fetch real images when possible
+ * Now tries to generate AI images when possible
  */
 export const convertRecommendedToRecipeCard = async (recommended: RecommendedRecipe): Promise<RecipeCard> => {
   // Generate basic cooking steps
@@ -288,21 +258,21 @@ export const convertRecommendedToRecipeCard = async (recommended: RecommendedRec
     recommended.steps.map((step, index) => `${index + 1}. ${step}`).join('\n') :
     `Preparing ${recommended.name}:\n\n${recommended.description}\n\nPlease refer to professional recipes for detailed steps.`;
   
-  // Try to get real recipe image first
+  // Try to generate AI image first
   let imageUrl: string;
   
   try {
-    const realImage = await tryFetchRealRecipeImage(recommended.name);
-    if (realImage) {
-      imageUrl = realImage;
-      console.log('[RecipeConverter] Using real image for:', recommended.name);
+    const aiImage = await tryGenerateRecipeImage(recommended.name, recommended.description);
+    if (aiImage) {
+      imageUrl = aiImage;
+      console.log('[RecipeConverter] Using AI-generated image for:', recommended.name);
     } else {
       // Fallback to consistent placeholder
       imageUrl = getConsistentPlaceholderImage(recommended.name);
       console.log('[RecipeConverter] Using placeholder image for:', recommended.name);
     }
   } catch (error) {
-    console.error('[RecipeConverter] Error fetching real image:', error);
+    console.error('[RecipeConverter] Error generating AI image:', error);
     imageUrl = getConsistentPlaceholderImage(recommended.name);
   }
   

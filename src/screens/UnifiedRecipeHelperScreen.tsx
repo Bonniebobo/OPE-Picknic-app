@@ -30,14 +30,7 @@ export default function UnifiedRecipeHelperScreen({
   const { cookingPlans } = useToCookList();
 
   const handleStartMenuPlanning = () => {
-    if (ingredients.length === 0) {
-      Alert.alert(
-        'Ingredients Needed',
-        'Please add some ingredients first, then start planning your menu.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
+    // Directly proceed to menu planning regardless of ingredient count
     setCurrentStep('menu-planning');
   };
 

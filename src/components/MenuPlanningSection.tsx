@@ -16,7 +16,7 @@ import { useLiveAPI } from '../services/gemini-live/context/LiveAPIContext';
 import { RecipeCard } from '../components/RecipeCard';
 import { RecipeDetailModal } from '../components/RecipeDetailModal';
 import { RecipeCard as RecipeCardType } from '../types/recipe';
-import { parseAIRecommendations } from '../utils/aiRecipeExtractor';
+import { parseAIRecommendations, parseAIRecommendationsWithImages } from '../utils/aiRecipeExtractor';
 import { fetchRecipeDetails, DetailedRecipe } from '../services/fetchRecipeDetails';
 
 interface MenuPlanningSectionProps {
@@ -106,36 +106,59 @@ export default function MenuPlanningSection({
       });
     };
 
-    const handleTurnComplete = (finalMessage?: string) => {
+    const handleTurnComplete = async (finalMessage?: string) => {
       const messageToProcess = finalMessage || currentAIMessage;
       console.log('[MenuPlanning] Turn complete, processing final message:', messageToProcess);
       console.log('[MenuPlanning] Is awaiting recommendation:', isAwaitingRecommendation);
       
       if (messageToProcess.trim()) {
-                // If awaiting recommendation or message contains recipe format, force parse as cards
+        // If awaiting recommendation or message contains recipe format, force parse as cards
         const shouldShowRecipes = isAwaitingRecommendation || 
           /Recommended Dishes[:\s]|Recipe Recommendations|\*\*.*\*\*|\d+\.\s*\*\*.*\*\*/.test(messageToProcess);
         
         console.log('[MenuPlanning] Should show recipes:', shouldShowRecipes);
         
         if (shouldShowRecipes) {
-          const extractedRecipes = parseAIRecommendations(messageToProcess);
-          console.log('[MenuPlanning] Extracted recipes:', extractedRecipes.length);
-          console.log('[MenuPlanning] Recipe names:', extractedRecipes.map((r: RecipeCardType) => r.name));
-          
-          if (extractedRecipes.length > 0) {
-            // Successfully parsed recipes, display as cards
-            addMessage({
-              role: 'ai',
-              content: '🍳 Here are my recommendations for you:',
-              recipes: extractedRecipes,
-            });
-          } else if (isAwaitingRecommendation) {
-            // Expected recommendation but parsing failed, show error message
-            addMessage({
-              role: 'ai',
-              content: 'Sorry, the AI response format is incorrect. Please click the "Smart Recipe Recommendation" button again.\n\nOriginal response:\n' + messageToProcess,
-            });
+          try {
+            // Try to use AI image generation for better quality
+            console.log('[MenuPlanning] Attempting to generate AI images for recipes...');
+            const extractedRecipes = await parseAIRecommendationsWithImages(messageToProcess);
+            console.log('[MenuPlanning] Extracted recipes with AI images:', extractedRecipes.length);
+            console.log('[MenuPlanning] Recipe names:', extractedRecipes.map((r: RecipeCardType) => r.name));
+            
+            if (extractedRecipes.length > 0) {
+              // Successfully parsed recipes with AI images, display as cards
+              addMessage({
+                role: 'ai',
+                content: '🍳 Here are my recommendations for you:',
+                recipes: extractedRecipes,
+              });
+            } else if (isAwaitingRecommendation) {
+              // Expected recommendation but parsing failed, show error message
+              addMessage({
+                role: 'ai',
+                content: 'Sorry, the AI response format is incorrect. Please click the "Smart Recipe Recommendation" button again.\n\nOriginal response:\n' + messageToProcess,
+              });
+            }
+          } catch (error) {
+            console.error('[MenuPlanning] Error generating AI images, falling back to placeholders:', error);
+            
+            // Fallback to sync version with placeholder images
+            const extractedRecipes = parseAIRecommendations(messageToProcess);
+            console.log('[MenuPlanning] Fallback: Extracted recipes:', extractedRecipes.length);
+            
+            if (extractedRecipes.length > 0) {
+              addMessage({
+                role: 'ai',
+                content: '🍳 Here are my recommendations for you:',
+                recipes: extractedRecipes,
+              });
+            } else if (isAwaitingRecommendation) {
+              addMessage({
+                role: 'ai',
+                content: 'Sorry, the AI response format is incorrect. Please click the "Smart Recipe Recommendation" button again.\n\nOriginal response:\n' + messageToProcess,
+              });
+            }
           }
         } else {
           // Regular chat message, display normally
@@ -212,8 +235,14 @@ Recommended Dishes:
     try {
       const detailedRecipe = await fetchRecipeDetails(recipe.name);
       if (detailedRecipe) {
-        setSelectedDetailRecipe(detailedRecipe);
-        console.log('[MenuPlanning] Successfully fetched details:', detailedRecipe.name);
+        // Use the AI-generated image from the recipe card instead of Edamam's image
+        const enhancedDetailedRecipe: DetailedRecipe = {
+          ...detailedRecipe,
+          image: recipe.imageUrl // Preserve the AI-generated or consistent placeholder image
+        };
+        
+        setSelectedDetailRecipe(enhancedDetailedRecipe);
+        console.log('[MenuPlanning] Successfully fetched details with preserved image:', enhancedDetailedRecipe.name);
       } else {
         console.log('[MenuPlanning] No detailed recipe found');
         Alert.alert('Notice', 'Could not find detailed information for this recipe. Please try again later.');

@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 
 const GEMINI_API_KEY = Constants.expoConfig?.extra?.GEMINI_API_KEY;
 const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_IMAGE_GENERATION_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent';
 
 const sysMessage_identify_dish_and_ingredients = `
 You are a professional chef and food expert. Your task is to analyze a food image and determine if it shows a complete dish or individual ingredients.
@@ -154,5 +155,109 @@ export async function identify_image_ingredients_gemini(imageBase64) {
     } catch (error) {
         console.error('Error identifying ingredients from image with Gemini:', error);
         return ["tomato", "basil", "cheese", "olive oil", "garlic"];
+    }
+}
+
+/**
+ * Generate recipe image using Gemini AI
+ * @param {string} recipeName - The name of the recipe to generate image for
+ * @param {string} description - Optional description to improve image quality
+ * @returns {Promise<string|null>} - Base64 image data or null if failed
+ */
+export async function generateRecipeImageWithGemini(recipeName, description = '') {
+    try {
+        console.log("Starting Gemini recipe image generation for:", recipeName);
+        
+        if (!GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY is not set for image generation');
+            return null;
+        }
+
+        // Create a detailed prompt for food photography
+        const prompt = `Generate a high-quality, appetizing photograph of ${recipeName}. ${description ? description + '. ' : ''}The image should be:
+- Professional food photography style
+- Well-lit with natural lighting
+- Beautifully plated and presented
+- High resolution and detailed
+- Restaurant-quality presentation
+- Warm, inviting colors
+- Sharp focus on the food
+- Clean, minimal background
+
+Make it look delicious and appetizing, suitable for a recipe app.`;
+
+        const requestBody = {
+            contents: [
+                {
+                    parts: [
+                        { text: prompt }
+                    ],
+                },
+            ],
+            generationConfig: {
+                temperature: 0.4,
+                topK: 32,
+                topP: 1,
+                maxOutputTokens: 8192,
+                // Request both text and image response
+                responseModalities: ["TEXT", "IMAGE"]
+            },
+        };
+
+        console.log("Sending image generation request to Gemini API...");
+        const response = await fetch(`${GEMINI_IMAGE_GENERATION_ENDPOINT}?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Gemini image generation API error:', response.status, errorText);
+            return null;
+        }
+
+        const responseData = await response.json();
+        console.log("Gemini image generation response received");
+
+        if (responseData.candidates && responseData.candidates[0] && responseData.candidates[0].content) {
+            const parts = responseData.candidates[0].content.parts;
+            
+            // Look for image data in the response
+            for (const part of parts) {
+                if (part.inlineData && part.inlineData.data) {
+                    console.log("Successfully generated recipe image for:", recipeName);
+                    return part.inlineData.data; // Return base64 image data
+                }
+            }
+        }
+        
+        console.log("No image data found in Gemini response");
+        return null;
+    } catch (error) {
+        console.error('Error generating recipe image with Gemini:', error);
+        return null;
+    }
+}
+
+/**
+ * Generate recipe image URL using Gemini AI and convert to data URL
+ * @param {string} recipeName - The name of the recipe
+ * @param {string} description - Optional description
+ * @returns {Promise<string|null>} - Data URL or null if failed
+ */
+export async function generateRecipeImageUrl(recipeName, description = '') {
+    try {
+        const base64Data = await generateRecipeImageWithGemini(recipeName, description);
+        if (base64Data) {
+            // Convert to data URL for use in React Native Image component
+            return `data:image/jpeg;base64,${base64Data}`;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error generating recipe image URL:', error);
+        return null;
     }
 }
