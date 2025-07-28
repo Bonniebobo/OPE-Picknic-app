@@ -7,13 +7,24 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useIngredients } from '../context/IngredientContext';
 import { useToCookList } from '../context/ToCookListContext';
+import { identify_food_from_image_gemini } from '../services/geminiImageAnalysis';
 
 interface IngredientInputSectionProps {
   onStartPlanning: () => void;
   onViewToCookList: () => void;
+}
+
+interface RecognizedItem {
+  id: string;
+  name: string;
+  type: 'ingredient' | 'dish';
+  isEditing?: boolean;
+  editValue?: string;
 }
 
 export default function IngredientInputSection({ 
@@ -30,6 +41,15 @@ export default function IngredientInputSection({
   
   const [inputText, setInputText] = useState('');
   const [inputMode, setInputMode] = useState<'manual' | 'voice' | 'camera'>('manual');
+
+  // Photo recognition state
+  const [showPhotoRecognition, setShowPhotoRecognition] = useState(false);
+  const [hasImage, setHasImage] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [recognizedItems, setRecognizedItems] = useState<RecognizedItem[]>([]);
+  const [recognitionResult, setRecognitionResult] = useState<{type: string, dishName?: string} | null>(null);
 
   // Common ingredient categories
   const commonIngredients = {
@@ -59,60 +79,270 @@ export default function IngredientInputSection({
 
   const handleCameraInput = () => {
     setInputMode('camera');
-    Alert.alert('Photo Recognition', 'Photo recognition feature is under development...', [
-      { text: 'OK', onPress: () => setInputMode('manual') }
-    ]);
+    handlePhotoRecognition();
+  };
+
+  // Photo recognition functions
+  const handlePhotoRecognition = () => {
+    setShowPhotoRecognition(true);
+    setHasImage(false);
+    setImageUri(null);
+    setImageBase64(null);
+    setRecognizedItems([]);
+    setRecognitionResult(null);
+  };
+
+  const requestPermissions = async () => {
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
+      Alert.alert(
+        'Permissions Required',
+        'Camera and photo library permissions are required to use this feature.',
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const handleTakePhoto = async () => {
+    const hasPermissions = await requestPermissions();
+    if (!hasPermissions) return;
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setHasImage(true);
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 || null);
+        setRecognizedItems([]);
+        processImage(asset.base64 || '');
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  const handleUploadPhoto = async () => {
+    const hasPermissions = await requestPermissions();
+    if (!hasPermissions) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setHasImage(true);
+        setImageUri(asset.uri);
+        setImageBase64(asset.base64 || null);
+        setRecognizedItems([]);
+        processImage(asset.base64 || '');
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      Alert.alert('Error', 'Failed to upload photo. Please try again.');
+    }
+  };
+
+  const processImage = async (base64: string) => {
+    if (!base64) return;
+    
+    setIsProcessingImage(true);
+    
+    try {
+      console.log('Analyzing image for food items...');
+      const result = await identify_food_from_image_gemini(base64);
+      
+      if (result.type === 'dish' && result.dishName) {
+        // Dish recognized
+        setRecognitionResult({ type: 'dish', dishName: result.dishName });
+        
+        const dishItem: RecognizedItem = {
+          id: `dish_${Date.now()}`,
+          name: result.dishName,
+          type: 'dish',
+        };
+        
+        const ingredientItems: RecognizedItem[] = result.ingredients.map((ingredient: string, index: number) => ({
+          id: `ingredient_${Date.now()}_${index}`,
+          name: ingredient,
+          type: 'ingredient' as const,
+        }));
+        
+        setRecognizedItems([dishItem, ...ingredientItems]);
+      } else {
+        // Ingredients recognized
+        setRecognitionResult({ type: 'ingredients' });
+        
+        const ingredientItems: RecognizedItem[] = result.ingredients.map((ingredient: string, index: number) => ({
+          id: `ingredient_${Date.now()}_${index}`,
+          name: ingredient,
+          type: 'ingredient' as const,
+        }));
+        
+        setRecognizedItems(ingredientItems);
+      }
+      
+    } catch (error) {
+      console.error('Error processing image:', error);
+      Alert.alert(
+        'Processing Error',
+        'Failed to analyze the image. Please try again with a clearer photo.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  const handleRetakePhoto = () => {
+    setHasImage(false);
+    setImageUri(null);
+    setImageBase64(null);
+    setRecognizedItems([]);
+    setRecognitionResult(null);
+  };
+
+  const handleEditItem = (id: string) => {
+    setRecognizedItems(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, isEditing: true, editValue: item.name }
+        : item
+    ));
+  };
+
+  const handleSaveEdit = (id: string) => {
+    setRecognizedItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const newName = item.editValue?.trim() || item.name;
+        return { ...item, name: newName, isEditing: false, editValue: undefined };
+      }
+      return item;
+    }));
+  };
+
+  const handleCancelEdit = (id: string) => {
+    setRecognizedItems(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, isEditing: false, editValue: undefined }
+        : item
+    ));
+  };
+
+  const handleDeleteItem = (id: string) => {
+    setRecognizedItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleUpdateEditValue = (id: string, value: string) => {
+    setRecognizedItems(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, editValue: value }
+        : item
+    ));
+  };
+
+  const handleConfirmRecognition = () => {
+    const ingredientsToAdd = recognizedItems
+      .filter(item => item.type === 'ingredient')
+      .map(item => item.name);
+    
+    // Add recognized ingredients to the ingredient list
+    ingredientsToAdd.forEach(ingredient => {
+      addIngredient(ingredient, 'camera');
+    });
+    
+    // Close photo recognition and navigate to menu planning
+    setShowPhotoRecognition(false);
+    
+    if (ingredientsToAdd.length > 0) {
+      Alert.alert(
+        'Ingredients Added!', 
+        `Added ${ingredientsToAdd.length} ingredients. Starting menu planning...`,
+        [
+          { 
+            text: 'OK', 
+            onPress: () => {
+              // Small delay to ensure state updates
+              setTimeout(() => {
+                onStartPlanning();
+              }, 100);
+            }
+          }
+        ]
+      );
+    } else {
+      onStartPlanning();
+    }
+  };
+
+  const handleCancelRecognition = () => {
+    setShowPhotoRecognition(false);
+    setHasImage(false);
+    setImageUri(null);
+    setImageBase64(null);
+    setRecognizedItems([]);
+    setRecognitionResult(null);
   };
 
   const renderInputMethods = () => (
     <View style={styles.inputMethods}>
       <Text style={styles.sectionTitle}>📝 Add Ingredients</Text>
       
-      {/* Input method selection */}
-      <View style={styles.inputModeSelector}>
-        <TouchableOpacity 
-          style={[styles.inputModeButton, inputMode === 'manual' && styles.inputModeButtonActive]}
-          onPress={() => setInputMode('manual')}
-        >
-          <Text style={[styles.inputModeText, inputMode === 'manual' && styles.inputModeTextActive]}>
-            ✏️ Manual Input
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.inputModeButton, inputMode === 'voice' && styles.inputModeButtonActive]}
-          onPress={handleVoiceInput}
-        >
-          <Text style={[styles.inputModeText, inputMode === 'voice' && styles.inputModeTextActive]}>
-            🎤 Voice Input
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.inputModeButton, inputMode === 'camera' && styles.inputModeButtonActive]}
-          onPress={handleCameraInput}
-        >
-          <Text style={[styles.inputModeText, inputMode === 'camera' && styles.inputModeTextActive]}>
-            📷 Photo Recognition
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* Main Photo Recognition Button */}
+      <TouchableOpacity 
+        style={styles.photoRecognitionButton}
+        onPress={handlePhotoRecognition}
+      >
+        <Text style={styles.photoRecognitionButtonIcon}>📷</Text>
+        <Text style={styles.photoRecognitionButtonText}>Recognize from Photo</Text>
+      </TouchableOpacity>
 
-      {/* Text input field */}
-      <View style={styles.textInputContainer}>
-        <TextInput
-          style={styles.textInput}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Enter ingredient name..."
-          placeholderTextColor="#9CA3AF"
-          onSubmitEditing={handleAddIngredient}
-          returnKeyType="done"
-        />
-        <TouchableOpacity 
-          style={[styles.addButton, !inputText.trim() && styles.addButtonDisabled]}
-          onPress={handleAddIngredient}
-          disabled={!inputText.trim()}
-        >
-          <Text style={styles.addButtonText}>Add</Text>
+      {/* Conditional Text Input */}
+      {inputMode === 'manual' && (
+        <View style={styles.textInputContainer}>
+          <TextInput
+            style={styles.textInput}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Enter ingredient name..."
+            placeholderTextColor="#9CA3AF"
+            onSubmitEditing={handleAddIngredient}
+            returnKeyType="done"
+          />
+          <TouchableOpacity 
+            style={[styles.addButton, !inputText.trim() && styles.addButtonDisabled]}
+            onPress={handleAddIngredient}
+            disabled={!inputText.trim()}
+          >
+            <Text style={styles.addButtonText}>Add</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Secondary Input Options */}
+      <View style={styles.secondaryInputContainer}>
+        <TouchableOpacity onPress={() => setInputMode(inputMode === 'manual' ? 'camera' : 'manual')}>
+          <Text style={styles.secondaryInputLink}>
+            {inputMode === 'manual' ? 'Cancel' : '✏️ Or type manually'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleVoiceInput}>
+          <Text style={styles.secondaryInputLink}>🎤 Or use voice</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -211,13 +441,173 @@ export default function IngredientInputSection({
     </View>
   );
 
+  const renderPhotoRecognitionModal = () => (
+    <View style={styles.photoRecognitionModal}>
+      <View style={styles.photoModalContent}>
+        {/* Header */}
+        <View style={styles.photoModalHeader}>
+          <Text style={styles.photoModalTitle}>📷 Photo Recognition</Text>
+          <TouchableOpacity 
+            style={styles.photoModalCloseButton}
+            onPress={handleCancelRecognition}
+          >
+            <Text style={styles.photoModalCloseText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        <ScrollView style={styles.photoModalScroll} showsVerticalScrollIndicator={false}>
+          {!hasImage ? (
+            <View style={styles.photoUploadSection}>
+              <Text style={styles.photoUploadTitle}>Take or upload a photo</Text>
+              <Text style={styles.photoUploadSubtitle}>
+                We'll identify ingredients or dishes from your photo
+              </Text>
+              
+              <View style={styles.photoUploadButtons}>
+                <TouchableOpacity style={styles.photoUploadButton} onPress={handleTakePhoto}>
+                  <Text style={styles.photoUploadButtonIcon}>📷</Text>
+                  <Text style={styles.photoUploadButtonText}>Take Photo</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={styles.photoUploadButton} onPress={handleUploadPhoto}>
+                  <Text style={styles.photoUploadButtonIcon}>📁</Text>
+                  <Text style={styles.photoUploadButtonText}>Upload</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.photoResultSection}>
+              {/* Image Preview */}
+              <View style={styles.photoPreview}>
+                <Image source={{ uri: imageUri! }} style={styles.photoPreviewImage} />
+                <TouchableOpacity style={styles.photoRetakeButton} onPress={handleRetakePhoto}>
+                  <Text style={styles.photoRetakeButtonText}>🔄 Retake</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Processing State */}
+              {isProcessingImage ? (
+                <View style={styles.photoProcessing}>
+                  <Text style={styles.photoProcessingIcon}>🔍</Text>
+                  <Text style={styles.photoProcessingText}>AI is analyzing your photo...</Text>
+                </View>
+              ) : recognizedItems.length > 0 ? (
+                <View style={styles.photoResults}>
+                  {/* Recognition Result Header */}
+                  {recognitionResult?.type === 'dish' && recognitionResult.dishName ? (
+                    <View style={styles.photoResultHeader}>
+                      <Text style={styles.photoResultTitle}>🍽️ Dish Recognized</Text>
+                      <Text style={styles.photoResultDish}>{recognitionResult.dishName}</Text>
+                      <Text style={styles.photoResultSubtitle}>Ingredients in this dish:</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.photoResultHeader}>
+                      <Text style={styles.photoResultTitle}>🥬 Ingredients Recognized</Text>
+                      <Text style={styles.photoResultSubtitle}>Tap to edit, swipe to remove:</Text>
+                    </View>
+                  )}
+
+                  {/* Editable Chips */}
+                  <View style={styles.recognizedChips}>
+                    {recognizedItems.map((item) => (
+                      <View key={item.id} style={[
+                        styles.recognizedChip,
+                        item.type === 'dish' && styles.recognizedChipDish
+                      ]}>
+                        {item.isEditing ? (
+                          <View style={styles.chipEditContainer}>
+                            <TextInput
+                              style={styles.chipEditInput}
+                              value={item.editValue}
+                              onChangeText={(text) => handleUpdateEditValue(item.id, text)}
+                              onSubmitEditing={() => handleSaveEdit(item.id)}
+                              autoFocus
+                            />
+                            <TouchableOpacity 
+                              style={styles.chipEditSaveButton}
+                              onPress={() => handleSaveEdit(item.id)}
+                            >
+                              <Text style={styles.chipEditSaveText}>✓</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={styles.chipEditCancelButton}
+                              onPress={() => handleCancelEdit(item.id)}
+                            >
+                              <Text style={styles.chipEditCancelText}>✕</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View style={styles.chipDisplayContainer}>
+                            <Text style={[
+                              styles.chipText,
+                              item.type === 'dish' && styles.chipTextDish
+                            ]}>
+                              {item.name}
+                            </Text>
+                            {item.type === 'ingredient' && (
+                              <>
+                                <TouchableOpacity 
+                                  style={styles.chipEditButton}
+                                  onPress={() => handleEditItem(item.id)}
+                                >
+                                  <Text style={styles.chipEditButtonText}>✎</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                  style={styles.chipDeleteButton}
+                                  onPress={() => handleDeleteItem(item.id)}
+                                >
+                                  <Text style={styles.chipDeleteButtonText}>×</Text>
+                                </TouchableOpacity>
+                              </>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.photoNoResults}>
+                  <Text style={styles.photoNoResultsIcon}>😅</Text>
+                  <Text style={styles.photoNoResultsText}>
+                    Couldn't identify any food items. Try a clearer photo or different angle.
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Actions */}
+        {hasImage && !isProcessingImage && recognizedItems.length > 0 && (
+          <View style={styles.photoModalActions}>
+            <TouchableOpacity 
+              style={styles.photoConfirmButton}
+              onPress={handleConfirmRecognition}
+            >
+              <Text style={styles.photoConfirmButtonText}>
+                ✅ Add Ingredients & Start Planning
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {renderInputMethods()}
-      {renderCommonIngredients()}
-      {renderCurrentIngredients()}
-      {renderActionButtons()}
-    </ScrollView>
+    <>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {renderInputMethods()}
+        {renderCommonIngredients()}
+        {renderCurrentIngredients()}
+        {renderActionButtons()}
+      </ScrollView>
+
+      {/* Photo Recognition Modal */}
+      {showPhotoRecognition && renderPhotoRecognitionModal()}
+    </>
   );
 }
 
@@ -274,6 +664,7 @@ const styles = StyleSheet.create({
   textInputContainer: {
     flexDirection: 'row',
     gap: 16,
+    marginTop: 16, // Add margin top
   },
   textInput: {
     flex: 1,
@@ -307,6 +698,29 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  photoRecognitionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E0E7FF', // Project standard light blue background
+    paddingVertical: 18, // Increased padding
+    borderRadius: 20, // Increased border radius
+    marginTop: 16,
+    marginHorizontal: 0, // Removed horizontal margin
+    shadowColor: '#C7D2FE',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  photoRecognitionButtonIcon: {
+    fontSize: 24,
+    marginRight: 8,
+  },
+  photoRecognitionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3B82F6', // Project standard blue color
   },
   commonIngredients: {
     backgroundColor: '#FFFFFF',
@@ -455,4 +869,281 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-}); 
+  // Photo Recognition Modal Styles
+  photoRecognitionModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  photoModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '90%',
+    height: '80%',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  photoModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  photoModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  photoModalCloseButton: {
+    padding: 5,
+  },
+  photoModalCloseText: {
+    fontSize: 24,
+    color: '#6B7280',
+  },
+  photoModalScroll: {
+    flex: 1,
+  },
+  photoUploadSection: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  photoUploadTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  photoUploadSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  photoUploadButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  photoUploadButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderRadius: 12,
+    backgroundColor: '#E0E7FF',
+    marginHorizontal: 10,
+  },
+  photoUploadButtonIcon: {
+    fontSize: 30,
+    marginBottom: 8,
+  },
+  photoUploadButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3B82F6',
+  },
+  photoResultSection: {
+    padding: 20,
+  },
+  photoPreview: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  photoPreviewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  photoRetakeButton: {
+    backgroundColor: '#E0E7FF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  photoRetakeButtonText: {
+    fontSize: 14,
+    color: '#3B82F6',
+  },
+  photoProcessing: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  photoProcessingIcon: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  photoProcessingText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  photoResults: {
+    marginTop: 10,
+  },
+  photoResultHeader: {
+    marginBottom: 15,
+  },
+  photoResultTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 5,
+  },
+  photoResultDish: {
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '600',
+  },
+  photoResultSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 5,
+  },
+  recognizedChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  recognizedChip: {
+    backgroundColor: '#E0E7FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recognizedChipDish: {
+    backgroundColor: '#FFE0E0', // Project standard light red background
+  },
+  chipDisplayContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chipText: {
+    fontSize: 14,
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  chipTextDish: {
+    color: '#E74C3C', // Project standard red color
+  },
+  chipEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  chipEditInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1F2937',
+    paddingVertical: 0,
+  },
+  chipEditSaveButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#10B981', // Modern green color
+    marginLeft: 5,
+  },
+  chipEditSaveText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  chipEditCancelButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#E74C3C', // Project standard red color
+    marginLeft: 5,
+  },
+  chipEditCancelText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  chipEditButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#E0E7FF',
+    marginLeft: 5,
+  },
+  chipEditButtonText: {
+    fontSize: 14,
+    color: '#3B82F6',
+  },
+  chipDeleteButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#FFE0E0', // Project standard light red background
+    marginLeft: 5,
+  },
+  chipDeleteButtonText: {
+    fontSize: 14,
+    color: '#E74C3C', // Project standard red color
+  },
+  photoNoResults: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  photoNoResultsIcon: {
+    fontSize: 40,
+    marginBottom: 10,
+  },
+  photoNoResultsText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  photoModalActions: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  photoConfirmButton: {
+    backgroundColor: '#10B981', // Modern green color
+    paddingVertical: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  photoConfirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  secondaryInputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+  },
+  secondaryInputLink: {
+    fontSize: 14,
+    color: '#3B82F6',
+    textDecorationLine: 'underline',
+  },
+});

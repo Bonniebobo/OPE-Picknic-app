@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { identify_image_ingredients } from '../services/imageAnalysis';
+import { identify_food_from_image_gemini } from '../services/geminiImageAnalysis';
 import { fetchRecipesFromEdamam } from '../services/edamamService';
 
 interface PhotoDishScreenProps {
@@ -139,10 +139,20 @@ export default function PhotoDishScreen({ onBack, onGetRecipe }: PhotoDishScreen
     setIsProcessing(true);
     
     try {
-      // Step 1: Identify ingredients from image using OpenAI Vision
+      // Step 1: Identify ingredients from image using Gemini Vision
       console.log('Analyzing image for ingredients...');
-      const ingredients = await identify_image_ingredients(imageBase64);
-      setIdentifiedIngredients(ingredients);
+      const result = await identify_food_from_image_gemini(imageBase64);
+      
+      let ingredients = [];
+      if (result.type === 'dish') {
+        console.log('Detected dish:', result.dishName);
+        ingredients = result.ingredients;
+        setIdentifiedIngredients(ingredients);
+      } else {
+        console.log('Detected ingredients:', result.ingredients);
+        ingredients = result.ingredients;
+        setIdentifiedIngredients(ingredients);
+      }
       
       // Step 2: Fetch recipes from Edamam API
       console.log('Fetching recipes for ingredients:', ingredients);

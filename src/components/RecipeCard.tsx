@@ -31,6 +31,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
 }) => {
   const { addToCookList, isInCookList } = useToCookList();
   const [showFullIngredients, setShowFullIngredients] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const isAlreadyInList = isInCookList(recipe.id);
 
@@ -44,20 +45,33 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
     }
   };
 
+  const handleImageError = () => {
+    console.log('Image failed to load:', recipe.imageUrl);
+    setImageError(true);
+  };
+
   // Ensure ingredients list exists and is valid
   const ingredients = recipe.ingredients || ['Ingredients to be confirmed'];
   const displayIngredients = showFullIngredients 
     ? ingredients 
     : ingredients.slice(0, 3);
 
+  // Get the image source
+  const getImageSource = () => {
+    if (imageError || !recipe.imageUrl) {
+      return require('../../assets/icon.png');
+    }
+    return { uri: recipe.imageUrl };
+  };
+
   return (
     <View style={styles.card}>
-      {/* 菜谱图片 */}
+      {/* Recipe Image */}
       <Image 
-        source={recipe.imageUrl ? { uri: recipe.imageUrl } : require('../../assets/icon.png')} 
+        source={getImageSource()}
         style={styles.image}
         defaultSource={require('../../assets/icon.png')}
-        onError={() => console.log('Image failed to load:', recipe.imageUrl)}
+        onError={handleImageError}
       />
       
       {/* 菜谱信息 */}

@@ -1,10 +1,65 @@
 import { RecommendedRecipe, ParsedRecommendationResult, RecipeCard } from '../types/recipe';
+import Constants from 'expo-constants';
+
+const { EDAMAM_ID, EDAMAM_KEY } = Constants.expoConfig?.extra || {};
 
 /**
  * New structured recipe recommendation parser
  * Specifically parses structured Markdown or JSON format returned by AI
  * No longer uses fuzzy text extraction, ensuring data accuracy
  */
+
+/**
+ * Try to fetch real recipe image from Edamam API
+ */
+async function tryFetchRealRecipeImage(recipeName: string): Promise<string | null> {
+  try {
+    if (!EDAMAM_ID || !EDAMAM_KEY) {
+      console.log('[ImageFetch] Edamam credentials not available');
+      return null;
+    }
+
+    console.log('[ImageFetch] Searching for recipe image:', recipeName);
+    
+    const queryParams = new URLSearchParams({
+      q: recipeName,
+      type: 'public',
+      app_id: EDAMAM_ID,
+      app_key: EDAMAM_KEY,
+      from: '0',
+      to: '1', // Only need the first result
+    });
+
+    const url = `https://api.edamam.com/api/recipes/v2?${queryParams.toString()}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Edamam-Account-User': 'picknic-user-123',
+      },
+    });
+
+    if (!response.ok) {
+      console.log('[ImageFetch] Edamam API request failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.hits && data.hits.length > 0 && data.hits[0].recipe.image) {
+      const imageUrl = data.hits[0].recipe.image;
+      console.log('[ImageFetch] Found real recipe image:', imageUrl);
+      return imageUrl;
+    }
+    
+    console.log('[ImageFetch] No image found for recipe:', recipeName);
+    return null;
+  } catch (error) {
+    console.error('[ImageFetch] Error fetching recipe image:', error);
+    return null;
+  }
+}
 
 /**
  * Parse AI returned structured recipe recommendations
@@ -225,20 +280,31 @@ function extractProperty(text: string, propertyNames: string[]): string | undefi
 
 /**
  * Convert RecommendedRecipe to RecipeCard format (for backward compatibility)
+ * Now tries to fetch real images when possible
  */
-export const convertRecommendedToRecipeCard = (recommended: RecommendedRecipe): RecipeCard => {
+export const convertRecommendedToRecipeCard = async (recommended: RecommendedRecipe): Promise<RecipeCard> => {
   // Generate basic cooking steps
   const instructions = recommended.steps ? 
     recommended.steps.map((step, index) => `${index + 1}. ${step}`).join('\n') :
     `Preparing ${recommended.name}:\n\n${recommended.description}\n\nPlease refer to professional recipes for detailed steps.`;
   
-  // Generate default image URL
-  const defaultImages = [
-    'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?w=400&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1574484284002-952d92456975?w=400&h=300&fit=crop',
-  ];
-  const imageUrl = defaultImages[Math.floor(Math.random() * defaultImages.length)];
+  // Try to get real recipe image first
+  let imageUrl: string;
+  
+  try {
+    const realImage = await tryFetchRealRecipeImage(recommended.name);
+    if (realImage) {
+      imageUrl = realImage;
+      console.log('[RecipeConverter] Using real image for:', recommended.name);
+    } else {
+      // Fallback to consistent placeholder
+      imageUrl = getConsistentPlaceholderImage(recommended.name);
+      console.log('[RecipeConverter] Using placeholder image for:', recommended.name);
+    }
+  } catch (error) {
+    console.error('[RecipeConverter] Error fetching real image:', error);
+    imageUrl = getConsistentPlaceholderImage(recommended.name);
+  }
   
   return {
     id: recommended.id,
@@ -254,6 +320,52 @@ export const convertRecommendedToRecipeCard = (recommended: RecommendedRecipe): 
 };
 
 /**
+ * Synchronous version for cases where we can't wait for async calls
+ */
+export const convertRecommendedToRecipeCardSync = (recommended: RecommendedRecipe): RecipeCard => {
+  // Generate basic cooking steps
+  const instructions = recommended.steps ? 
+    recommended.steps.map((step, index) => `${index + 1}. ${step}`).join('\n') :
+    `Preparing ${recommended.name}:\n\n${recommended.description}\n\nPlease refer to professional recipes for detailed steps.`;
+  
+  const imageUrl = getConsistentPlaceholderImage(recommended.name);
+  
+  return {
+    id: recommended.id,
+    name: recommended.name,
+    imageUrl,
+    ingredients: recommended.ingredients || ['Prepare ingredients according to recipe'],
+    cookingTime: recommended.cookingTime,
+    instructions,
+    difficulty: recommended.difficulty,
+    calories: 'About 400-500 calories',
+    servings: '2-3 servings',
+  };
+};
+
+/**
+ * Generate consistent placeholder image based on recipe name
+ */
+function getConsistentPlaceholderImage(recipeName: string): string {
+  const images = [
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&auto=format', // Delicious food 1
+    'https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?w=400&h=300&fit=crop&auto=format', // Delicious food 2
+    'https://images.unsplash.com/photo-1574484284002-952d92456975?w=400&h=300&fit=crop&auto=format', // Delicious food 3
+    'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop&auto=format', // Delicious food 4
+    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop&auto=format', // Delicious food 5
+    'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=400&h=300&fit=crop&auto=format', // Delicious food 6
+  ];
+  
+  // Use recipe name to consistently select the same image
+  const hash = recipeName.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  const index = Math.abs(hash) % images.length;
+  return images[index];
+}
+
+/**
  * Main export function: Intelligent recipe recommendation parsing
  * Replaces the original smartExtractRecipes function
  */
@@ -263,7 +375,7 @@ export const parseAIRecommendations = (aiResponse: string): RecipeCard[] => {
   
   const result = parseStructuredRecommendations(aiResponse);
   if (result.success && result.recipes.length > 0) {
-    const recipeCards = result.recipes.map(convertRecommendedToRecipeCard);
+    const recipeCards = result.recipes.map(convertRecommendedToRecipeCardSync);
     console.log('[StructuredParser] Successfully parsed', recipeCards.length, 'recipes');
     console.log('[StructuredParser] Parse results:', recipeCards.map(card => ({
       name: card.name,
@@ -285,6 +397,26 @@ export const parseAIRecommendations = (aiResponse: string): RecipeCard[] => {
     
     // Return empty array, force AI to return correct format
     return [];
+  }
+};
+
+/**
+ * Enhanced async version that tries to fetch real images
+ */
+export const parseAIRecommendationsWithImages = async (aiResponse: string): Promise<RecipeCard[]> => {
+  console.log('[StructuredParser] Starting async parsing with real images...');
+  
+  const result = parseStructuredRecommendations(aiResponse);
+  if (result.success && result.recipes.length > 0) {
+    // Convert with real images (async)
+    const recipeCardsPromises = result.recipes.map(convertRecommendedToRecipeCard);
+    const recipeCards = await Promise.all(recipeCardsPromises);
+    
+    console.log('[StructuredParser] Successfully parsed', recipeCards.length, 'recipes with images');
+    return recipeCards;
+  } else {
+    // Fallback to sync version
+    return parseAIRecommendations(aiResponse);
   }
 };
 
@@ -325,7 +457,7 @@ function tryFallbackParsing(response: string): RecipeCard[] {
         const card: RecipeCard = {
           id: `fallback_recipe_${Date.now()}_${index}`,
           name,
-          imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop',
+          imageUrl: getConsistentPlaceholderImage(name),
           ingredients: ['Prepare ingredients according to recipe'],
           cookingTime: 'About 30 minutes',
           instructions: `For detailed steps to prepare ${name}, please refer to the complete recipe.`,
