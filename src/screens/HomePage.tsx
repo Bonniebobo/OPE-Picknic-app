@@ -119,13 +119,15 @@ function getSeasonalPick() {
   }
 }
 
-export default function HomePage({ eatingPreference = 'unsure', onBotSelect }: { eatingPreference?: string; onBotSelect?: (botId: string) => void }) {
+export default function HomePage({ eatingPreference = 'unsure', onBotSelect, onMoodMatchSelect }: { eatingPreference?: string; onBotSelect?: (botId: string) => void; onMoodMatchSelect?: () => void }) {
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
   const seasonalPick = getSeasonalPick();
 
   const handleCharacterSelect = (characterId: string) => {
     setSelectedCharacter(characterId);
-    if (onBotSelect) {
+    if (characterId === 'mood-matcher' && onMoodMatchSelect) {
+      onMoodMatchSelect();
+    } else if (onBotSelect) {
       onBotSelect(characterId);
     }
   };

@@ -317,11 +317,17 @@ Recommended Dishes:
         p.inlineData && p.inlineData.mimeType?.startsWith('audio/pcm')
       );
       
+      console.log('🔊 GeminiLiveClient: Found audio parts:', audioParts.length);
+      
       audioParts.forEach((part: any) => {
         if (part.inlineData?.data) {
+          console.log('🔊 GeminiLiveClient: Processing audio part, mimeType:', part.inlineData.mimeType);
           const audioData = this.base64ToArrayBuffer(part.inlineData.data);
+          console.log('🔊 GeminiLiveClient: Emitting audio event, buffer size:', audioData.byteLength);
           this.emit('audio', audioData);
           this.log('server.audio', `Audio buffer (${audioData.byteLength} bytes)`);
+        } else {
+          console.log('🔊 GeminiLiveClient: Audio part has no data');
         }
       });
 
