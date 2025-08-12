@@ -194,36 +194,51 @@ export class AudioService extends EventEmitter<AudioServiceEvents> {
 
   async playAudioFromBuffer(audioData: ArrayBuffer): Promise<boolean> {
     try {
+      console.log('🔊 AI Audio: Starting playback, buffer size:', audioData.byteLength);
+      
       // Stop any existing sound
       if (this.sound) {
         await this.sound.unloadAsync();
         this.sound = null;
       }
 
-      // Convert ArrayBuffer to base64
-      const uint8Array = new Uint8Array(audioData);
+      // Convert PCM ArrayBuffer to WAV format
+      const wavBuffer = this.pcmToWav(audioData);
+      console.log('🔊 AI Audio: Converted to WAV, size:', wavBuffer.byteLength);
+      
+      // Convert to base64
+      const uint8Array = new Uint8Array(wavBuffer);
       const base64String = this.arrayBufferToBase64(uint8Array);
       const dataUri = `data:audio/wav;base64,${base64String}`;
+      
+      console.log('🔊 AI Audio: Created data URI, length:', dataUri.length);
 
       // Create and play sound
       const { sound } = await Audio.Sound.createAsync({ uri: dataUri });
       this.sound = sound;
+      console.log('🔊 AI Audio: Sound created successfully');
 
       this.emit('playbackStarted');
-      await sound.playAsync();
+      await sound.playAsync()
+        .then(() => {
+          console.log('🔊 AI Audio: Started playing successfully');
+        })
+        .catch((e) => {
+          console.error('❌ AI Audio: Play error', e);
+        });
       
       // Set up completion handler
       sound.setOnPlaybackStatusUpdate((status) => {
+        console.log('🔊 AI Audio: Playback status:', status);
         if (status.isLoaded && status.didJustFinish) {
           this.emit('playbackStopped');
+          console.log('🔊 AI Audio: Playback finished');
         }
       });
 
-      console.log('[AudioService] Audio playback started');
       return true;
-
     } catch (error) {
-      console.error('[AudioService] Failed to play audio:', error);
+      console.error('❌ AI Audio: Error during playback', error);
       this.emit('playbackError', error as Error);
       return false;
     }
@@ -282,6 +297,66 @@ export class AudioService extends EventEmitter<AudioServiceEvents> {
       binary += String.fromCharCode(bytes[i]);
     }
     return btoa(binary);
+  }
+
+  // Convert PCM data to WAV format
+  private pcmToWav(pcmData: ArrayBuffer): ArrayBuffer {
+    const pcmArray = new Int16Array(pcmData);
+    const sampleRate = 24000; // Gemini Live uses 24kHz
+    const channels = 1; // Mono
+    const bitsPerSample = 16;
+    
+    // WAV header size
+    const headerSize = 44;
+    const dataSize = pcmArray.length * 2; // 2 bytes per sample
+    const fileSize = headerSize + dataSize - 8;
+    
+    // Create WAV buffer
+    const wavBuffer = new ArrayBuffer(headerSize + dataSize);
+    const view = new DataView(wavBuffer);
+    
+    // Write WAV header
+    let offset = 0;
+    
+    // RIFF header
+    view.setUint32(offset, 0x52494646, false); // "RIFF"
+    offset += 4;
+    view.setUint32(offset, fileSize, true); // File size
+    offset += 4;
+    view.setUint32(offset, 0x57415645, false); // "WAVE"
+    offset += 4;
+    
+    // fmt chunk
+    view.setUint32(offset, 0x666D7420, false); // "fmt "
+    offset += 4;
+    view.setUint32(offset, 16, true); // Chunk size
+    offset += 4;
+    view.setUint16(offset, 1, true); // Audio format (PCM)
+    offset += 2;
+    view.setUint16(offset, channels, true); // Channels
+    offset += 2;
+    view.setUint32(offset, sampleRate, true); // Sample rate
+    offset += 4;
+    view.setUint32(offset, sampleRate * channels * bitsPerSample / 8, true); // Byte rate
+    offset += 4;
+    view.setUint16(offset, channels * bitsPerSample / 8, true); // Block align
+    offset += 2;
+    view.setUint16(offset, bitsPerSample, true); // Bits per sample
+    offset += 2;
+    
+    // data chunk
+    view.setUint32(offset, 0x64617461, false); // "data"
+    offset += 4;
+    view.setUint32(offset, dataSize, true); // Data size
+    offset += 4;
+    
+    // Copy PCM data
+    const pcmView = new Uint8Array(pcmData);
+    const wavView = new Uint8Array(wavBuffer, headerSize);
+    wavView.set(pcmView);
+    
+    console.log('🔊 AI Audio: WAV conversion complete');
+    return wavBuffer;
   }
 
   // Utility method to delete temporary audio files

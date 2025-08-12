@@ -5,6 +5,7 @@ import ChatPage from './ChatPage';
 import CalendarPage from './CalendarPage';
 import CollectionPage from './CollectionPage';
 import BotInteractionScreen from './BotInteractionScreen';
+import MoodMatchScreen from './MoodMatchScreen';
 import { LiveAPIProvider } from '../services/gemini-live';
 
 // type TabType = 'home' | 'chat' | 'calendar' | 'collection';
@@ -17,6 +18,7 @@ interface MainAppProps {
 export default function MainApp({ eatingPreference = 'unsure', cuisinePreferences = [] }: MainAppProps) {
   const [activeTab, setActiveTab] = useState<'home' | 'chat' | 'calendar' | 'collection'>('home');
   const [selectedBot, setSelectedBot] = useState<string | null>(null);
+  const [showMoodMatch, setShowMoodMatch] = useState(false);
 
   const handleBotSelect = (botId: string) => {
     setSelectedBot(botId);
@@ -27,13 +29,24 @@ export default function MainApp({ eatingPreference = 'unsure', cuisinePreference
     setActiveTab('home');
   };
 
+  const handleMoodMatchSelect = () => {
+    setShowMoodMatch(true);
+  };
+
+  const handleBackFromMoodMatch = () => {
+    setShowMoodMatch(false);
+  };
+
   const renderCurrentTab = () => {
+    if (showMoodMatch) {
+      return <MoodMatchScreen onBack={handleBackFromMoodMatch} />;
+    }
     if (selectedBot) {
       return <BotInteractionScreen botId={selectedBot} eatingPreference={eatingPreference} onBack={handleBackToHome} />;
     }
     switch (activeTab) {
       case 'home':
-        return <HomePage eatingPreference={eatingPreference} onBotSelect={handleBotSelect} />;
+        return <HomePage eatingPreference={eatingPreference} onBotSelect={handleBotSelect} onMoodMatchSelect={handleMoodMatchSelect} />;
       case 'chat':
         return <ChatPage />;
       case 'calendar':
@@ -41,12 +54,12 @@ export default function MainApp({ eatingPreference = 'unsure', cuisinePreference
       case 'collection':
         return <CollectionPage />;
       default:
-        return <HomePage eatingPreference={eatingPreference} onBotSelect={handleBotSelect} />;
+        return <HomePage eatingPreference={eatingPreference} onBotSelect={handleBotSelect} onMoodMatchSelect={handleMoodMatchSelect} />;
     }
   };
 
-  // Hide bottom navigation when in bot interaction
-  const showBottomNav = !selectedBot;
+  // Hide bottom navigation when in bot interaction or mood match
+  const showBottomNav = !selectedBot && !showMoodMatch;
 
   return (
     <LiveAPIProvider>

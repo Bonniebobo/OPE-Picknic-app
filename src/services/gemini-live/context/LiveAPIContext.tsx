@@ -220,6 +220,7 @@ export const LiveAPIProvider: React.FC<LiveAPIProviderProps> = ({
 
     // Audio playback for responses
     const handleAudioResponse = (audioData: ArrayBuffer) => {
+      console.log('🔊 LiveAPIContext: Received AI audio event, buffer size:', audioData.byteLength);
       audioService.playAudioFromBuffer(audioData);
     };
     client.on('audio', handleAudioResponse);
