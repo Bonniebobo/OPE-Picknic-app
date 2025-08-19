@@ -74,11 +74,11 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
         onError={handleImageError}
       />
       
-      {/* 菜谱信息 */}
+              {/* Recipe information */}
       <View style={styles.content}>
         <Text style={styles.title}>{recipe.name}</Text>
         
-        {/* 制作时间和难度 */}
+        {/* Cooking time and difficulty */}
         <View style={styles.metaRow}>
           {recipe.cookingTime && (
             <Text style={styles.metaText}>⏱️ {recipe.cookingTime}</Text>

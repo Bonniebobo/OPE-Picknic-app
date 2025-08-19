@@ -50,7 +50,7 @@ export const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({
   };
 
   const formatInstructions = (instructions: string) => {
-    // 将制作步骤按行分割并格式化
+    // Split and format cooking steps by line
     const steps = instructions.split('\n').filter(step => step.trim());
     return steps.map((step, index) => (
       <View key={index} style={styles.stepContainer}>
@@ -69,7 +69,7 @@ export const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>← 返回</Text>
+                      <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -83,57 +83,57 @@ export const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({
             styles.todoButtonText,
             isAlreadyInList && styles.todoButtonTextActive
           ]}>
-            {isAlreadyInList ? '✅ 已在清单' : '➕ 加入待做'}
+            {isAlreadyInList ? '✅ In List' : '➕ Add to List'}
           </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 菜谱图片 */}
+                  {/* Recipe image */}
         <Image 
           source={{ uri: recipe.imageUrl }} 
           style={styles.image}
           defaultSource={require('../../assets/icon.png')}
         />
 
-        {/* 菜谱标题和基本信息 */}
+                  {/* Recipe title and basic info */}
         <View style={styles.infoSection}>
           <Text style={styles.title}>{recipe.name}</Text>
           
           <View style={styles.metaContainer}>
             {recipe.cookingTime && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>⏱️ 制作时间</Text>
+                <Text style={styles.metaLabel}>⏱️ Cooking Time</Text>
                 <Text style={styles.metaValue}>{recipe.cookingTime}</Text>
               </View>
             )}
             
             {recipe.difficulty && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>📊 难度</Text>
+                <Text style={styles.metaLabel}>📊 Difficulty</Text>
                 <Text style={styles.metaValue}>{recipe.difficulty}</Text>
               </View>
             )}
             
             {recipe.servings && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>👥 份量</Text>
+                <Text style={styles.metaLabel}>👥 Servings</Text>
                 <Text style={styles.metaValue}>{recipe.servings}</Text>
               </View>
             )}
             
             {recipe.calories && (
               <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>🔥 热量</Text>
+                <Text style={styles.metaLabel}>🔥 Calories</Text>
                 <Text style={styles.metaValue}>{recipe.calories}</Text>
               </View>
             )}
           </View>
         </View>
 
-        {/* 食材清单 */}
+                  {/* Ingredients list */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🥬 所需食材</Text>
+                      <Text style={styles.sectionTitle}>🥬 Ingredients</Text>
           <View style={styles.ingredientsContainer}>
             {recipe.ingredients.map((ingredient, index) => (
               <View key={index} style={styles.ingredientItem}>
@@ -144,15 +144,15 @@ export const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({
           </View>
         </View>
 
-        {/* 制作步骤 */}
+                  {/* Cooking steps */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>👨‍🍳 制作步骤</Text>
+                      <Text style={styles.sectionTitle}>👨‍🍳 Instructions</Text>
           <View style={styles.stepsContainer}>
             {formatInstructions(recipe.instructions)}
           </View>
         </View>
 
-        {/* 来源链接 */}
+                  {/* Source link */}
         {recipe.url && (
           <View style={styles.section}>
             <TouchableOpacity
@@ -160,7 +160,7 @@ export const RecipeDetailScreen: React.FC<RecipeDetailScreenProps> = ({
               onPress={handleOpenSource}
             >
               <Text style={styles.sourceButtonText}>
-                🔗 查看原始菜谱
+                🔗 View Original Recipe
               </Text>
             </TouchableOpacity>
           </View>

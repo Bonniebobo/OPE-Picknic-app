@@ -77,7 +77,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
     const { nativeEvent } = syntheticEvent;
     console.log('WebView error details:', nativeEvent);
     
-    // 临时弹窗显示详细错误信息
+    // Temporary popup to show detailed error info
     Alert.alert(
       'WebView Error',
       `Code: ${nativeEvent.code}\nDescription: ${nativeEvent.description}\nURL: ${nativeEvent.url}\nDomain: ${nativeEvent.domain}`,
@@ -93,14 +93,14 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
     const { nativeEvent } = syntheticEvent;
     console.log('WebView HTTP error:', nativeEvent);
     
-    // 对于 401 错误，尝试继续加载而不是显示错误页面
+    // For 401 errors, try to continue loading instead of showing error page
     if (nativeEvent.statusCode === 401) {
       console.log('401 error detected, but continuing to load...');
-      // 不设置 hasError，让 WebView 继续尝试
+      // Don't set hasError, let WebView continue trying
       return;
     }
     
-    // 临时弹窗显示 HTTP 错误信息
+    // Temporary popup to show HTTP error info
     Alert.alert(
       'WebView HTTP Error',
       `Status: ${nativeEvent.statusCode}\nDescription: ${nativeEvent.description}\nURL: ${nativeEvent.url}`,
@@ -148,12 +148,12 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
       console.log('Request method:', request.method);
       console.log('Request headers:', request.headers);
       
-      // 允许所有 Vercel 相关的请求在 WebView 中处理
+      // Allow all Vercel-related requests to be handled in WebView
       if (request.url.includes('vercel.com') || request.url.includes('live-api-web-console')) {
         return true;
       }
       
-      // 对于其他外部链接，可以选择是否在 WebView 中打开
+      // For other external links, can choose whether to open in WebView
       return true;
     },
     
@@ -247,11 +247,11 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
              (function() {
                console.log('WebView JavaScript injected successfully');
                
-               // 全局音频监控设置
+               // Global audio monitoring settings
                window.audioMonitoringEnabled = true;
                window.lastAudioBuffer = null;
                
-               // 音频上下文恢复函数
+               // Audio context resume function
                function resumeAudioContext() {
                  if (window.AudioContext || window.webkitAudioContext) {
                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -270,7 +270,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                  }
                }
                
-               // 强制播放音频函数
+               // Force audio playback function
                function forcePlayAudio(audioElement) {
                  if (audioElement) {
                    console.log('🔊 WebView: Attempting to force play audio');
@@ -291,26 +291,26 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                  }
                }
                
-               // 创建并播放AI音频的函数
+               // Function to create and play AI audio
                function createAndPlayAIAudio(audioBuffer) {
                  try {
                    console.log('🔊 WebView: Creating AI audio element, buffer size:', audioBuffer.byteLength);
                    
-                   // 创建Blob对象
+                   // Create Blob object
                    const blob = new Blob([audioBuffer], { type: 'audio/wav' });
                    const audioUrl = URL.createObjectURL(blob);
                    
-                   // 创建audio元素
+                   // Create audio element
                    const audio = new Audio(audioUrl);
                    audio.volume = 1.0;
                    audio.autoplay = false;
                    
-                   // 添加到DOM
+                   // Add to DOM
                    audio.style.display = 'none';
                    audio.id = 'ai-audio-' + Date.now();
                    document.body.appendChild(audio);
                    
-                   // 播放音频
+                   // Play audio
                    setTimeout(() => {
                      audio.play().then(() => {
                        console.log('🔊 WebView: AI audio started playing via <audio> tag');
@@ -329,7 +329,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                      });
                    }, 100);
                    
-                   // 清理资源
+                   // Clean up resources
                    audio.onended = () => {
                      URL.revokeObjectURL(audioUrl);
                      if (audio.parentNode) {
@@ -341,18 +341,18 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                  }
                }
                
-               // 拦截AudioContext的播放
+               // Intercept AudioContext playback
                function interceptAudioContext() {
                  if (window.AudioContext || window.webkitAudioContext) {
                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
                    
-                   // 拦截AudioContext构造函数
+                   // Intercept AudioContext constructor
                    const OriginalAudioContext = AudioContextClass;
                    window.AudioContext = function(...args) {
                      const context = new OriginalAudioContext(...args);
                      console.log('🔊 WebView: AudioContext created');
                      
-                     // 拦截resume方法
+                     // Intercept resume method
                      const originalResume = context.resume;
                      context.resume = function() {
                        console.log('🔊 WebView: AudioContext.resume() called');
@@ -367,14 +367,14 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                    };
                    window.AudioContext.prototype = OriginalAudioContext.prototype;
                    
-                   // 同样处理webkitAudioContext
+                   // Handle webkitAudioContext similarly
                    if (window.webkitAudioContext) {
                      window.webkitAudioContext = window.AudioContext;
                    }
                  }
                }
                
-               // 拦截 <audio> 元素的创建和播放
+               // Intercept <audio> element creation and playback
                function interceptAudioElements() {
                  const originalAudio = window.Audio;
                  window.Audio = function(...args) {
@@ -385,7 +385,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                      timestamp: Date.now()
                    }));
                    
-                   // 拦截play方法
+                   // Intercept play method
                    const originalPlay = audio.play;
                    audio.play = function() {
                      console.log('🔊 WebView: audio.play() called');
@@ -399,7 +399,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                    return audio;
                  };
                  
-                 // 监听所有现有的audio元素
+                 // Monitor all existing audio elements
                  const existingAudioElements = document.querySelectorAll('audio');
                  existingAudioElements.forEach(audio => {
                    console.log('🔊 WebView: Found existing <audio> element');
@@ -409,7 +409,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                      src: audio.src || 'unknown'
                    }));
                    
-                   // 监听播放事件
+                   // Listen for play events
                    audio.addEventListener('play', () => {
                      console.log('🔊 WebView: Audio play event detected');
                      window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -429,7 +429,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                  });
                }
                
-               // 监听DOM变化，检测新增的audio元素
+               // Monitor DOM changes, detect new audio elements
                function observeAudioElements() {
                  const observer = new MutationObserver((mutations) => {
                    mutations.forEach((mutation) => {
@@ -442,7 +442,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                            src: node.src || 'unknown'
                          }));
                          
-                         // 为新元素添加事件监听器
+                         // Add event listeners for new elements
                          node.addEventListener('play', () => {
                            console.log('🔊 WebView: Audio play event detected (new element)');
                            window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -470,7 +470,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                  });
                }
                
-               // WebSocket监控函数
+               // WebSocket monitoring function
                function monitorWebSocketAudio() {
                  if (window.WebSocket) {
                    const OriginalWebSocket = window.WebSocket;
@@ -480,7 +480,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                      
                      const originalOnMessage = ws.onmessage;
                      ws.onmessage = function(event) {
-                       // 检查是否是音频数据
+                       // Check if it's audio data
                        if (event.data instanceof ArrayBuffer || 
                            (typeof event.data === 'string' && event.data.includes('audio')) ||
                            (event.data instanceof Blob)) {
@@ -500,7 +500,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                                partsCount = parsed.parts ? parsed.parts.length : 1;
                                console.log('🔊 WebView: WebSocket audio JSON detected, parts:', partsCount);
                                
-                               // 尝试创建和播放音频
+                               // Try to create and play audio
                                if (parsed.parts) {
                                  parsed.parts.forEach(part => {
                                    if (part.inlineData && part.inlineData.data && part.inlineData.mimeType.startsWith('audio/')) {
@@ -512,10 +512,10 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                                          audioView[i] = audioData.charCodeAt(i);
                                        }
                                        
-                                       // 存储音频缓冲区
+                                       // Store audio buffer
                                        window.lastAudioBuffer = audioBuffer;
                                        
-                                       // 尝试创建和播放音频
+                                       // Try to create and play audio
                                        createAndPlayAIAudio(audioBuffer);
                                      } catch (audioError) {
                                        console.error('🔊 WebView: Error processing audio data:', audioError);
@@ -525,7 +525,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                                }
                              }
                            } catch (e) {
-                             // 不是JSON，继续检查其他格式
+                             // Not JSON, continue checking other formats
                            }
                          }
                          
@@ -548,40 +548,40 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                  }
                }
                
-               // 初始化所有监控
+               // Initialize all monitoring
                function initializeAudioMonitoring() {
                  console.log('🔊 WebView: Initializing audio monitoring...');
                  
-                 // 恢复音频上下文
+                 // Resume audio context
                  resumeAudioContext();
                  
-                 // 拦截AudioContext
+                 // Intercept AudioContext
                  interceptAudioContext();
                  
-                 // 拦截Audio元素
+                 // Intercept Audio elements
                  interceptAudioElements();
                  
-                 // 观察DOM变化
+                 // Observe DOM changes
                  observeAudioElements();
                  
-                 // 监控WebSocket
+                 // Monitor WebSocket
                  monitorWebSocketAudio();
                  
                  console.log('🔊 WebView: Audio monitoring initialized');
                }
                
-               // 页面加载完成后初始化
+               // Initialize after page load
                if (document.readyState === 'loading') {
                  document.addEventListener('DOMContentLoaded', initializeAudioMonitoring);
                } else {
                  initializeAudioMonitoring();
                }
                
-               // 用户交互时恢复音频上下文
+               // Resume audio context on user interaction
                document.addEventListener('click', resumeAudioContext);
                document.addEventListener('touchstart', resumeAudioContext);
                
-               // 定期检查和恢复音频上下文
+               // Periodically check and resume audio context
                setInterval(() => {
                  if (window.audioContext && window.audioContext.state === 'suspended') {
                    console.log('🔊 WebView: AudioContext suspended, attempting to resume...');

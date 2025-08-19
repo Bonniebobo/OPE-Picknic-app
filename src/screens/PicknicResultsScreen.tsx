@@ -110,7 +110,7 @@ export default function PicknicResultsScreen({ botId, eatingPreference, onBack, 
   };
 
   const handleSuggestionAction = (modeId: string, suggestion: any) => {
-    // 可集成跳转到详情页
+    // Can integrate navigation to detail page
   };
 
   const handleSwitchMode = () => {
@@ -147,7 +147,7 @@ export default function PicknicResultsScreen({ botId, eatingPreference, onBack, 
               >
                 <View style={styles.modeRow}>
                   <View style={styles.modeIconBox}>
-                    {/* 图标可用 emoji 或后续用 vector-icons 替换 */}
+                    {/* Icon can use emoji or vector-icons later */}
                     <Text style={styles.modeIcon}>{mode.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
-// 占位：后续可替换为自定义组件
+// Placeholder: can be replaced with custom component later
 // import { ArrowRight } from '../components/ArrowRight';
 
 const eatingOptions = [
@@ -90,10 +90,11 @@ export default function EatingPreferenceScreen({ onComplete }: EatingPreferenceS
                     style={[
                       styles.optionButton,
                       {
-                        backgroundColor: isSelected ? option.selectedBg : option.background,
-                        borderColor: isSelected ? option.border : 'transparent',
+                        backgroundColor: isSelected ? option.selectedBg : 'rgba(255,255,255,0.95)',
+                        borderColor: isSelected ? '#FB7185' : 'rgba(229, 231, 235, 0.8)',
                         transform: [{ scale: isSelected ? 1.02 : 1 }],
-                        shadowOpacity: isSelected ? 0.18 : 0.12,
+                        shadowOpacity: isSelected ? 0.15 : 0.08,
+                        shadowColor: isSelected ? '#FB7185' : '#000',
                       },
                     ]}
                     activeOpacity={0.85}
@@ -102,7 +103,7 @@ export default function EatingPreferenceScreen({ onComplete }: EatingPreferenceS
                       <View
                         style={[
                           styles.optionEmojiBox,
-                          { backgroundColor: isSelected ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.5)' },
+                          { backgroundColor: isSelected ? 'rgba(255,255,255,0.9)' : 'rgba(243, 244, 246, 0.8)' },
                         ]}
                       >
                         <Text style={styles.optionEmoji}>{option.emoji}</Text>
@@ -195,41 +196,41 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     width: '100%',
-    padding: 20,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 18,
     borderWidth: 2,
-    marginBottom: 16,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
   },
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   optionEmojiBox: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   optionEmoji: {
-    fontSize: 28,
+    fontSize: 20,
   },
   optionContent: {
     flex: 1,
   },
   optionLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1F2937',
     marginBottom: 4,
   },
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   selectedIndicatorOuter: {
     width: 24,
     height: 24,
-    backgroundColor: 'linear-gradient(45deg, #FB7185, #FDBA74)', // 可用渐变色库替换
+    backgroundColor: '#FB7185',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -261,9 +262,12 @@ const styles = StyleSheet.create({
   },
   skipButton: {
     backgroundColor: 'transparent',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
   },
   skipButtonText: {
     color: '#9CA3AF',
@@ -272,25 +276,26 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     backgroundColor: '#FB7185',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 36,
     alignItems: 'center',
-    flexDirection: 'row',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#FB7185',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+    minWidth: 140,
   },
   continueButtonDisabled: {
     backgroundColor: '#E5E7EB',
   },
   continueButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: 17,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   continueButtonTextDisabled: {
     color: '#9CA3AF',

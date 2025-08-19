@@ -1,13 +1,203 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 
-const calendarData: Record<string, { bot: string; meal: string; activity: string }> = {
-  '2024-01-15': { bot: '🐰', meal: '🍜', activity: 'Comfort ramen chat' },
-  '2024-01-16': { bot: '🐱', meal: '🍝', activity: 'Pasta recipe discussion' },
-  '2024-01-17': { bot: '🦊', meal: '🎲', activity: 'Food challenge game' },
-  '2024-01-18': { bot: '🐶', meal: '🌮', activity: 'Taco Tuesday celebration' },
-  '2024-01-19': { bot: '🐰', meal: '🥗', activity: 'Healthy salad suggestions' },
-  '2024-01-20': { bot: '🐱', meal: '🍕', activity: 'Pizza making tips' },
+// AI Characters data matching HomePage and ChatPage
+const aiCharacters = [
+  {
+    id: 'mood-matcher',
+    name: 'Mood Matcher',
+    emoji: '🩷',
+    background: '#FCE7F3',
+    avatarColors: {
+      body: '#FBCFE8',
+      head: '#F9A8D4',
+      cheeks: '#F472B6',
+      eyes: '#1F2937',
+      mouth: '#374151',
+    },
+  },
+  {
+    id: 'recipe-helper',
+    name: 'Recipe Helper',
+    emoji: '🥕',
+    background: '#FFEDD5',
+    avatarColors: {
+      body: '#FED7AA',
+      head: '#FDBA74',
+      cheeks: '#FB923C',
+      eyes: '#1F2937',
+      mouth: '#374151',
+    },
+  },
+  {
+    id: 'experienced-explorer',
+    name: 'Experienced Explorer',
+    emoji: '🌍',
+    background: '#DCFCE7',
+    avatarColors: {
+      body: '#BBF7D0',
+      head: '#86EFAC',
+      cheeks: '#4ADE80',
+      eyes: '#1F2937',
+      mouth: '#374151',
+    },
+  },
+  {
+    id: 'play-mode-bot',
+    name: 'Play Mode Bot',
+    emoji: '🎮',
+    background: '#F3E8FF',
+    avatarColors: {
+      body: '#E9D5FF',
+      head: '#D8B4FE',
+      cheeks: '#A78BFA',
+      eyes: '#1F2937',
+      mouth: '#374151',
+    },
+  },
+];
+
+const calendarData: Record<string, { botId: string; meal: string; activity: string }> = {
+  '2024-01-15': { botId: 'mood-matcher', meal: '🍜', activity: 'Comfort ramen chat' },
+  '2024-01-16': { botId: 'recipe-helper', meal: '🍝', activity: 'Pasta recipe tips' },
+  '2024-01-17': { botId: 'play-mode-bot', meal: '🎲', activity: 'Food challenge game' },
+  '2024-01-18': { botId: 'experienced-explorer', meal: '🌮', activity: 'Taco Tuesday spots' },
+  '2024-01-19': { botId: 'mood-matcher', meal: '🥗', activity: 'Healthy salad ideas' },
+  '2024-01-20': { botId: 'recipe-helper', meal: '🍕', activity: 'Pizza making tips' },
+};
+
+// FlatAvatar component matching HomePage and ChatPage
+const FlatAvatar = ({ colors, size = 'small' }: { colors: any; size?: 'small' | 'large' }) => {
+  const isSmall = size === 'small';
+  const containerSize = isSmall ? 20 : 32;
+  const headSize = isSmall ? 14 : 24;
+  const bodySize = isSmall ? 10 : 16;
+  const eyeSize = isSmall ? 2 : 3;
+  const mouthWidth = isSmall ? 3 : 5;
+  const cheekSize = isSmall ? 2 : 3;
+  const armSize = isSmall ? 4 : 6;
+  
+  return (
+    <View style={[styles.avatarContainer, { width: containerSize, height: containerSize }]}>
+      {/* Body */}
+      <View style={[
+        styles.avatarBody, 
+        { 
+          backgroundColor: colors.body,
+          width: bodySize,
+          height: bodySize * 0.8,
+          left: (containerSize - bodySize) / 2,
+          borderRadius: bodySize / 2
+        }
+      ]} />
+      {/* Head */}
+      <View style={[
+        styles.avatarHead, 
+        { 
+          backgroundColor: colors.head,
+          width: headSize,
+          height: headSize,
+          left: (containerSize - headSize) / 2,
+          borderRadius: headSize / 2
+        }
+      ]}>
+        {/* Eyes */}
+        <View style={[
+          styles.avatarEye, 
+          { 
+            left: headSize * 0.25,
+            backgroundColor: colors.eyes,
+            width: eyeSize,
+            height: eyeSize,
+            borderRadius: eyeSize / 2,
+            top: headSize * 0.35
+          }
+        ]} />
+        <View style={[
+          styles.avatarEye, 
+          { 
+            right: headSize * 0.25,
+            backgroundColor: colors.eyes,
+            width: eyeSize,
+            height: eyeSize,
+            borderRadius: eyeSize / 2,
+            top: headSize * 0.35
+          }
+        ]} />
+        {/* Mouth */}
+        <View style={[
+          styles.avatarMouth, 
+          { 
+            backgroundColor: colors.mouth,
+            width: mouthWidth,
+            height: eyeSize,
+            left: (headSize - mouthWidth) / 2,
+            borderRadius: eyeSize / 2,
+            top: headSize * 0.6
+          }
+        ]} />
+        {/* Cheeks */}
+        <View style={[
+          styles.avatarCheek, 
+          { 
+            left: headSize * 0.15,
+            backgroundColor: colors.cheeks,
+            width: cheekSize,
+            height: cheekSize * 0.8,
+            borderRadius: cheekSize / 2,
+            top: headSize * 0.45,
+            opacity: 0.6
+          }
+        ]} />
+        <View style={[
+          styles.avatarCheek, 
+          { 
+            right: headSize * 0.15,
+            backgroundColor: colors.cheeks,
+            width: cheekSize,
+            height: cheekSize * 0.8,
+            borderRadius: cheekSize / 2,
+            top: headSize * 0.45,
+            opacity: 0.6
+          }
+        ]} />
+      </View>
+      {/* Arms - only for larger size */}
+      {!isSmall && (
+        <>
+          <View style={[
+            styles.avatarArm, 
+            { 
+              left: 0,
+              backgroundColor: colors.body,
+              width: armSize,
+              height: armSize * 2,
+              borderRadius: armSize / 2,
+              top: containerSize * 0.7,
+              transform: [{ rotate: '-12deg' }]
+            }
+          ]} />
+          <View style={[
+            styles.avatarArm, 
+            { 
+              right: 0,
+              backgroundColor: colors.body,
+              width: armSize,
+              height: armSize * 2,
+              borderRadius: armSize / 2,
+              top: containerSize * 0.7,
+              transform: [{ rotate: '12deg' }]
+            }
+          ]} />
+        </>
+      )}
+    </View>
+  );
+};
+
+// Helper function to get character by ID
+const getCharacterById = (botId: string) => {
+  return aiCharacters.find(char => char.id === botId) || aiCharacters[0];
 };
 
 export default function CalendarPage() {
@@ -55,7 +245,7 @@ export default function CalendarPage() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Food Calendar</Text>
-          <Text style={styles.headerSubtitle}>Track your AI companion chats and meals</Text>
+          <Text style={styles.headerSubtitle}>Track your AI chats and meals</Text>
         </View>
 
         {/* Calendar Card */}
@@ -104,7 +294,7 @@ export default function CalendarPage() {
                   <Text style={styles.calendarCellDay}>{day}</Text>
                   {dayData && (
                     <View style={styles.calendarCellEmojis}>
-                      <Text style={styles.calendarCellEmoji}>{dayData.bot}</Text>
+                      <FlatAvatar colors={getCharacterById(dayData.botId).avatarColors} size="small" />
                       <Text style={styles.calendarCellEmoji}>{dayData.meal}</Text>
                     </View>
                   )}
@@ -124,7 +314,7 @@ export default function CalendarPage() {
                 })}
               </Text>
               <View style={styles.detailCardEmojisRow}>
-                <Text style={styles.detailCardEmoji}>{calendarData[selectedDate].bot}</Text>
+                <FlatAvatar colors={getCharacterById(calendarData[selectedDate].botId).avatarColors} size="large" />
                 <Text style={styles.detailCardEmoji}>{calendarData[selectedDate].meal}</Text>
               </View>
               <Text style={styles.detailCardActivity}>{calendarData[selectedDate].activity}</Text>
@@ -163,4 +353,12 @@ const styles = StyleSheet.create({
   detailCardEmojisRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   detailCardEmoji: { fontSize: 28, marginHorizontal: 8 },
   detailCardActivity: { fontSize: 15, color: '#6B7280', fontWeight: '500', textAlign: 'center' },
+  // FlatAvatar styles
+  avatarContainer: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  avatarBody: { position: 'absolute', bottom: 0 },
+  avatarHead: { position: 'absolute', top: 0, alignItems: 'center', justifyContent: 'center' },
+  avatarEye: { position: 'absolute' },
+  avatarMouth: { position: 'absolute' },
+  avatarCheek: { position: 'absolute' },
+  avatarArm: { position: 'absolute' },
 }); 

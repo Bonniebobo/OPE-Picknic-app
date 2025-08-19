@@ -9,9 +9,11 @@ const likedItems = [
 ];
 
 const dislikedItems = [
-  { id: '1', name: 'Spicy Food', type: 'ingredient', emoji: '🌶️', reason: 'Too hot for me', background: '#FECACA' },
-  { id: '2', name: 'Seafood', type: 'category', emoji: '🐟', reason: 'Allergic reaction', background: '#DBEAFE' },
-  { id: '3', name: 'Organ Meats', type: 'ingredient', emoji: '🫘', reason: 'Texture preference', background: '#F3F4F6' },
+  { id: '1', name: 'Spicy Szechuan Noodles', type: 'dish', emoji: '🍜', reason: 'Too spicy for my taste', background: '#FECACA', category: 'Chinese' },
+  { id: '2', name: 'Raw Oysters', type: 'dish', emoji: '🦪', reason: 'Texture and seafood allergy', background: '#DBEAFE', category: 'Seafood' },
+  { id: '3', name: 'Liver and Onions', type: 'dish', emoji: '🍽️', reason: 'Strong flavor preference', background: '#F3F4F6', category: 'Traditional' },
+  { id: '4', name: 'Blue Cheese Salad', type: 'dish', emoji: '🥗', reason: 'Too pungent for me', background: '#FEF3C7', category: 'Salads' },
+  { id: '5', name: 'Fermented Tofu Hotpot', type: 'dish', emoji: '🍲', reason: 'Strong fermented smell', background: '#E0E7FF', category: 'Asian' },
 ];
 
 export default function CollectionPage() {
@@ -32,7 +34,7 @@ export default function CollectionPage() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Collection</Text>
-          <Text style={styles.headerSubtitle}>Curate your food preferences and discoveries</Text>
+          <Text style={styles.headerSubtitle}>Your food preferences</Text>
         </View>
 
         {/* Section Toggle */}
@@ -42,14 +44,14 @@ export default function CollectionPage() {
             onPress={() => setActiveSection('liked')}
             activeOpacity={0.85}
           >
-            <Text style={[styles.toggleButtonText, activeSection === 'liked' && styles.toggleButtonTextActive]}>❤️ Liked ({likedItems.length})</Text>
+            <Text style={[styles.toggleButtonText, activeSection === 'liked' && styles.toggleButtonTextActive]}>❤️ Liked</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.toggleButton, activeSection === 'disliked' && styles.toggleButtonActive]}
             onPress={() => setActiveSection('disliked')}
             activeOpacity={0.85}
           >
-            <Text style={[styles.toggleButtonText, activeSection === 'disliked' && styles.toggleButtonTextActive]}>🚫 Disliked ({dislikedItems.length})</Text>
+            <Text style={[styles.toggleButtonText, activeSection === 'disliked' && styles.toggleButtonTextActive]}>🚫 Disliked</Text>
           </TouchableOpacity>
         </View>
 
@@ -80,7 +82,7 @@ export default function CollectionPage() {
                         <Text style={styles.cardTag}>{item.type}</Text>
                         <Text style={styles.cardTag}>{item.category}</Text>
                       </View>
-                      <Text style={styles.cardMood}>Mood: {item.mood}</Text>
+                      <Text style={styles.cardMood}>{item.mood}</Text>
                     </View>
                     <TouchableOpacity
                       style={styles.cardActionBtn}
@@ -102,7 +104,10 @@ export default function CollectionPage() {
                     <Text style={styles.cardEmoji}>{item.emoji}</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardTitle}>{item.name}</Text>
-                      <Text style={styles.cardTag}>{item.type}</Text>
+                      <View style={styles.cardTagsRow}>
+                        <Text style={styles.cardTag}>{item.type}</Text>
+                        <Text style={styles.cardTag}>{item.category}</Text>
+                      </View>
                       <Text style={styles.cardMood}>{item.reason}</Text>
                     </View>
                     <TouchableOpacity
@@ -127,7 +132,7 @@ export default function CollectionPage() {
           >
             {/* <Plus /> */}
             <Text style={styles.plusIcon}>➕</Text>
-            <Text style={styles.addNewBtnText}>Add New {activeSection === 'liked' ? 'Favorite' : 'Dislike'}</Text>
+            <Text style={styles.addNewBtnText}>Add {activeSection === 'liked' ? 'Favorite' : 'Dislike'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

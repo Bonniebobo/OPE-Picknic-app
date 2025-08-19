@@ -71,7 +71,7 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed, navigation 
     if (navigation) {
       navigation.navigate('RecipeDetail', { recipe });
     } else {
-      Alert.alert('菜谱详情', `${recipe.name}\n\n${recipe.instructions}`);
+      Alert.alert('Recipe Details', `${recipe.name}\n\n${recipe.instructions}`);
     }
   };
 
@@ -161,7 +161,7 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed, navigation 
         const parsedResponse = parseGeminiRecipeResponse(messageToProcess);
         
         // Check if we should generate recipe cards
-        const shouldShowRecipes = /推荐|菜谱|食谱|制作|烹饪|做法|菜|recipe|建议|可以做|试试|怎么做|什么菜|土豆烧鸡块|咖喱鸡肉土豆|小鸡炖蘑菇/i.test(messageToProcess);
+        const shouldShowRecipes = /recipe|recommend|cook|make|dish|food|ingredient|suggest|try|what.*cook|how.*make/i.test(messageToProcess);
         
         console.log('[RecipeHelperAIMode] Should show recipes:', shouldShowRecipes);
         
@@ -217,11 +217,11 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed, navigation 
     try {
       const success = await connect();
       if (!success) {
-        throw new Error('连接失败');
+        throw new Error('Connection failed');
       }
     } catch (err) {
-      console.error('连接Gemini失败:', err);
-      Alert.alert('连接错误', '无法连接到AI服务。请检查网络连接或稍后重试。');
+      console.error('Failed to connect to Gemini:', err);
+      Alert.alert('Connection Error', 'Unable to connect to AI service. Please check your network connection or try again later.');
     } finally {
       setIsConnecting(false);
     }
@@ -272,7 +272,7 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed, navigation 
       // Send to Gemini for conversational response
       await handleGeminiConversation(userMessage);
     } catch (error) {
-      addMessage('ai', '抱歉，处理你的消息时出现了问题。请重试。');
+      addMessage('ai', 'Sorry, there was an issue processing your message. Please try again.');
       setIsProcessing(false);
     }
   };
@@ -280,9 +280,7 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed, navigation 
   const extractIngredientsFromText = (text: string): string[] => {
     // Simple ingredient extraction logic
     const commonIngredients = [
-      '西红柿', '土豆', '洋葱', '胡萝卜', '白菜', '菠菜', '豆腐', '鸡蛋', '牛肉', '猪肉', '鸡肉', 
-      '鱼', '大蒜', '生姜', '葱', '芹菜', '青椒', '茄子', '黄瓜', '萝卜', '韭菜', '豆角',
-      '米饭', '面条', '面包', '奶酪', '牛奶', '酸奶', '鸡胸肉', '虾', '蘑菇', '玉米',
+
       'tomato', 'potato', 'onion', 'carrot', 'cabbage', 'spinach', 'tofu', 'egg', 'beef', 
       'pork', 'chicken', 'fish', 'garlic', 'ginger', 'celery', 'pepper', 'cheese', 'milk'
     ];
@@ -301,7 +299,7 @@ export default function RecipeHelperAIMode({ onIngredientsConfirmed, navigation 
 
   const generateAIResponse = (ingredients: string[]): string => {
     if (ingredients.length === 0) {
-      return "请告诉我更多具体的食材信息。";
+      return "Please tell me more specific ingredient information.";
     }
     
     if (ingredients.length === 1) {

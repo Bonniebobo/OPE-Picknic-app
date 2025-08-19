@@ -220,7 +220,7 @@ export default function BotInteractionScreen({ botId, eatingPreference, onBack }
             >
               <View style={styles.optionRow}>
                 <View style={styles.optionIconBox}>
-                  {/* 图标可用 emoji 或后续用 vector-icons 替换 */}
+                  {/* Icon can use emoji or vector-icons later */}
                   <Text style={styles.optionIcon}>{option.icon}</Text>
                 </View>
                 <View style={{ flex: 1 }}>

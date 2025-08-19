@@ -70,14 +70,14 @@ export class SpeechService {
     
     // Mock transcription results
     const mockTranscripts = [
-      "我有西红柿、鸡蛋和青椒",
-      "我想做一道牛肉面",
-      "今天想吃点清淡的，有豆腐和蔬菜",
-      "我有鸡胸肉、胡萝卜和洋葱",
-      "想做个简单的蛋炒饭",
       "I have tomatoes, eggs and peppers",
       "I want to make beef noodles",
-      "I have chicken breast, carrots and onions"
+      "Today I want something light, I have tofu and vegetables",
+      "I have chicken breast, carrots and onions",
+      "I want to make simple fried rice",
+      "I have ingredients for a healthy salad",
+      "Looking for something quick and easy to cook",
+      "What can I make with pasta and vegetables?"
     ];
     
     const randomTranscript = mockTranscripts[Math.floor(Math.random() * mockTranscripts.length)];
@@ -92,9 +92,7 @@ export class SpeechService {
 
   private extractIngredients(text: string): string[] {
     const commonIngredients = [
-      '西红柿', '土豆', '洋葱', '胡萝卜', '白菜', '菠菜', '豆腐', '鸡蛋', '牛肉', '猪肉', '鸡肉', 
-      '鸡胸肉', '鱼', '大蒜', '生姜', '葱', '芹菜', '青椒', '茄子', '黄瓜', '萝卜', '韭菜', '豆角',
-      '米饭', '面条', '面包', '奶酪', '牛奶', '酸奶', '虾', '蘑菇', '玉米', '番茄', '蕃茄',
+
       'tomato', 'tomatoes', 'potato', 'potatoes', 'onion', 'onions', 'carrot', 'carrots', 
       'cabbage', 'spinach', 'tofu', 'egg', 'eggs', 'beef', 'pork', 'chicken', 'fish', 
       'garlic', 'ginger', 'celery', 'pepper', 'peppers', 'cheese', 'milk', 'shrimp', 'mushroom', 'corn'

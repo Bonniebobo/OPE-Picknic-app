@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-// 占位：后续可替换为自定义组件
+// Placeholder: can be replaced with custom component later
 // import { PicknicMascot } from '../components/PicknicMascot';
 // import { ArrowRight } from '../components/ArrowRight';
 // import { Check } from '../components/Check';
@@ -18,14 +18,16 @@ interface Question {
   subtitle: string;
   type: 'single' | 'multi';
   options: Option[];
+  headerEmoji: string;
 }
 
 const questions: Question[] = [
   {
     id: 'eating-preference',
-    title: "What's your usual eating preference?",
-    subtitle: 'Help us understand your dietary style so we can suggest the perfect meals!',
+    title: "What's your diet?",
+    subtitle: 'Help us suggest better meals',
     type: 'single',
+    headerEmoji: '🍽️',
     options: [
       { id: 'vegetarian', text: 'Vegetarian', emoji: '🥗', color: '#D1FAE5' },
       { id: 'vegan', text: 'Vegan', emoji: '🌱', color: '#A7F3D0' },
@@ -35,9 +37,10 @@ const questions: Question[] = [
   },
   {
     id: 'foods-to-avoid',
-    title: 'Are there any foods you dislike or want to avoid?',
-    subtitle: "Select all that apply - we'll make sure to skip these in your recommendations!",
+    title: 'Any foods to avoid?',
+    subtitle: "We'll skip these in recommendations",
     type: 'multi',
+    headerEmoji: '🚫',
     options: [
       { id: 'spicy', text: 'Spicy food', emoji: '🌶️', color: '#FECACA' },
       { id: 'seafood', text: 'Seafood', emoji: '🐟', color: '#BFDBFE' },
@@ -48,9 +51,10 @@ const questions: Question[] = [
   },
   {
     id: 'allergies',
-    title: 'Do you have any food allergies we should know about?',
-    subtitle: 'Your safety is our priority! Select any allergies you have so we can keep you safe',
+    title: 'Any food allergies?',
+    subtitle: 'Keep you safe with recommendations',
     type: 'multi',
+    headerEmoji: '⚠️',
     options: [
       { id: 'peanuts', text: 'Peanuts', emoji: '🥜', color: '#FDE68A' },
       { id: 'dairy', text: 'Dairy', emoji: '🥛', color: '#BFDBFE' },
@@ -113,7 +117,6 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
         {/* Header */}
         <View style={styles.header}>
           {/* <PicknicMascot /> */}
-          <Text style={{ fontSize: 48 }}>🧺</Text>
           {/* Progress */}
           <View style={styles.progressContainer}>
             <Text style={styles.progressText}>{currentStep + 1} of {questions.length}</Text>
@@ -129,6 +132,7 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
             <View style={styles.cardContent}>
               {/* Question */}
               <View style={styles.questionHeader}>
+                <Text style={styles.headerEmoji}>{currentQuestion.headerEmoji}</Text>
                 <Text style={styles.questionTitle}>{currentQuestion.title}</Text>
                 <Text style={styles.questionSubtitle}>{currentQuestion.subtitle}</Text>
               </View>
@@ -157,16 +161,17 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
                     style={[
                       styles.optionButton,
                       {
-                        backgroundColor: isSelected ? option.color : '#fff',
-                        borderColor: isSelected ? '#FB7185' : '#E5E7EB',
+                        backgroundColor: isSelected ? option.color : 'rgba(255,255,255,0.95)',
+                        borderColor: isSelected ? '#FB7185' : 'rgba(229, 231, 235, 0.8)',
                         transform: [{ scale: isSelected ? 1.02 : 1 }],
-                        shadowOpacity: isSelected ? 0.18 : 0.12,
+                        shadowOpacity: isSelected ? 0.15 : 0.08,
+                        shadowColor: isSelected ? '#FB7185' : '#000',
                       },
                     ]}
                     activeOpacity={0.85}
                   >
                     <View style={styles.optionRow}>
-                      <View style={[styles.optionEmojiBox, { backgroundColor: isSelected ? 'rgba(255,255,255,0.7)' : '#F3F4F6' }] }>
+                      <View style={[styles.optionEmojiBox, { backgroundColor: isSelected ? 'rgba(255,255,255,0.9)' : 'rgba(243, 244, 246, 0.8)' }] }>
                         <Text style={styles.optionEmoji}>{option.emoji}</Text>
                       </View>
                       <Text style={styles.optionLabel}>{option.text}</Text>
@@ -180,34 +185,47 @@ export default function Onboarding({ onComplete }: PicknicOnboardingProps = {}) 
                 );
               })}
               {currentQuestion.type === 'multi' && (
-                <Text style={styles.multiHint}>You can select multiple options</Text>
+                <Text style={styles.multiHint}>Select multiple if needed</Text>
               )}
             </View>
           </View>
         </View>
 
         {/* Bottom navigation */}
-        <View style={styles.bottomNavRow}>
-          {currentStep > 0 ? (
-            <TouchableOpacity style={styles.skipButton} onPress={handleBack}>
-              <Text style={styles.skipButtonText}>Back</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ width: 60 }} />
-          )}
-          <TouchableOpacity
-            style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
-            onPress={handleNext}
-            disabled={!canContinue}
-          >
-            <Text style={[styles.continueButtonText, !canContinue && styles.continueButtonTextDisabled]}>
-              {currentStep === questions.length - 1 ? 'Almost Done!' : 'Continue'}
-            </Text>
-            {/* <ArrowRight /> */}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-            <Text style={styles.skipButtonText}>Skip</Text>
-          </TouchableOpacity>
+        <View style={styles.bottomNavContainer}>
+          <View style={styles.bottomNavRow}>
+            {/* Left: Back Button */}
+            <View style={styles.navButtonContainer}>
+              {currentStep > 0 ? (
+                <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.8}>
+                  <Text style={styles.backButtonText} numberOfLines={1}>Back</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.navButtonPlaceholder} />
+              )}
+            </View>
+
+            {/* Center: Continue Button */}
+            <View style={styles.continueButtonContainer}>
+              <TouchableOpacity
+                style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
+                onPress={handleNext}
+                disabled={!canContinue}
+                activeOpacity={0.9}
+              >
+                <Text style={[styles.continueButtonText, !canContinue && styles.continueButtonTextDisabled]}>
+                  {currentStep === questions.length - 1 ? 'Done!' : 'Next'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Right: Skip Button */}
+            <View style={styles.navButtonContainer}>
+              <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.8}>
+                <Text style={styles.skipButtonText}>Skip</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -231,15 +249,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   progressContainer: {
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 12,
+    marginBottom: 12,
     width: '100%',
   },
   progressText: {
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
-    marginBottom: 6,
+    marginBottom: 8,
     textAlign: 'center',
   },
   progressBarBg: {
@@ -260,8 +278,8 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 24,
-    marginBottom: 24,
+    borderRadius: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -275,6 +293,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  headerEmoji: {
+    fontSize: 42,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   questionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -287,13 +310,14 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     marginBottom: 4,
+    fontWeight: '500',
   },
   optionButton: {
     width: '100%',
-    padding: 16,
+    padding: 14,
     borderRadius: 16,
     borderWidth: 2,
-    marginBottom: 12,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 6,
@@ -304,12 +328,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   optionEmojiBox: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
@@ -317,7 +341,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   optionEmoji: {
-    fontSize: 22,
+    fontSize: 20,
   },
   optionLabel: {
     flex: 1,
@@ -343,49 +367,101 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  // Bottom Navigation Styles
+  bottomNavContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 12,
+    backgroundColor: '#FFF7ED',
   },
   bottomNavRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 32,
   },
+  navButtonContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  navButtonPlaceholder: {
+    width: 100,
+    height: 48,
+  },
+  
+  // Back Button
+  backButton: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderWidth: 1.5,
+    borderColor: 'rgba(107, 114, 128, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  
+  // Continue Button
+  continueButtonContainer: {
+    flex: 2,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  continueButton: {
+    backgroundColor: '#FB7185',
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FB7185',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 4,
+    minWidth: 140,
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+  },
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  continueButtonTextDisabled: {
+    color: '#9CA3AF',
+  },
+  
+  // Skip Button
   skipButton: {
     backgroundColor: 'transparent',
-    borderRadius: 16,
+    borderRadius: 22,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    minWidth: 80,
+    alignItems: 'center',
   },
   skipButtonText: {
     color: '#9CA3AF',
     fontSize: 16,
     fontWeight: '500',
-  },
-  continueButton: {
-    backgroundColor: '#FB7185',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  continueButtonDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-  continueButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  continueButtonTextDisabled: {
-    color: '#9CA3AF',
   },
 }); 

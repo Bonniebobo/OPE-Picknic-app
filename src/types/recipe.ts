@@ -12,20 +12,20 @@ export interface RecipeCard {
   url?: string;
 }
 
-// 新的推荐菜品数据结构（强制统一）
+// New recommended dish data structure (unified)
 export interface RecommendedRecipe {
   id: string;
-  name: string;          // 菜名
-  englishName?: string;   // 可选英文名
-  description: string;   // 简介
-  cookingTime: string;   // 时间
-  difficulty: string;    // 简单/中等/复杂
-  taste: string;         // 口味
-  ingredients?: string[]; // 可选
-  steps?: string[];       // 可选
+  name: string;          // Recipe name
+  englishName?: string;   // Optional English name
+  description: string;   // Description
+  cookingTime: string;   // Cooking time
+  difficulty: string;    // Easy/Medium/Hard
+  taste: string;         // Taste profile
+  ingredients?: string[]; // Optional
+  steps?: string[];       // Optional
 }
 
-// AI响应解析结果
+// AI response parsing result
 export interface ParsedRecommendationResult {
   recipes: RecommendedRecipe[];
   success: boolean;

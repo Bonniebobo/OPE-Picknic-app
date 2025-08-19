@@ -326,11 +326,11 @@ export default function IngredientInputSection({
       <View style={styles.secondaryInputContainer}>
         <TouchableOpacity onPress={() => setInputMode(inputMode === 'manual' ? 'camera' : 'manual')}>
           <Text style={styles.secondaryInputLink}>
-            {inputMode === 'manual' ? 'Cancel' : '✏️ Or type manually'}
+            {inputMode === 'manual' ? 'Cancel' : '✏️ Type manually'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleVoiceInput}>
-          <Text style={styles.secondaryInputLink}>🎤 Or use voice</Text>
+          <Text style={styles.secondaryInputLink}>🎤 Use voice</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -465,9 +465,9 @@ export default function IngredientInputSection({
         <ScrollView style={styles.photoModalScroll} showsVerticalScrollIndicator={false}>
           {!hasImage ? (
             <View style={styles.photoUploadSection}>
-              <Text style={styles.photoUploadTitle}>Take or upload a photo</Text>
+              <Text style={styles.photoUploadTitle}>Take / upload photo</Text>
               <Text style={styles.photoUploadSubtitle}>
-                We'll identify ingredients or dishes from your photo
+                We'll identify ingredients and dishes from your photo
               </Text>
               
               <View style={styles.photoUploadButtons}>

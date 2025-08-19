@@ -27,7 +27,7 @@ export default function HomeScreen({ eatingPreference = 'unsure' }: PicknicHomeP
   };
 
   const handleQuickAction = (actionId: string) => {
-    // 可集成导航或功能
+    // Can integrate navigation or functionality
   };
 
   const getDiningModeEmoji = () => {

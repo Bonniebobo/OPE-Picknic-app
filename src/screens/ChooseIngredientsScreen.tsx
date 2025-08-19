@@ -142,7 +142,7 @@ export default function ChooseIngredientsScreen({ onBack, onContinue, onScanIngr
       const ingredients = await identify_image_ingredients(base64);
       setIdentifiedIngredients(ingredients);
       
-      // 自动添加识别到的ingredients到选择列表
+      // Automatically add recognized ingredients to selection list
       const newIngredients = ingredients.filter((ingredient: string) => 
         !selectedIngredients.includes(ingredient.toLowerCase())
       );

@@ -50,7 +50,7 @@ export default function OnboardingScreen({ onComplete }: PicknicOnboardingProps 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFF7ED', // 渐变色可后续用LinearGradient实现
+    backgroundColor: '#FFF7ED', // Can use LinearGradient for gradient colors later
   },
   scrollContainer: {
     flexGrow: 1,

@@ -1,36 +1,114 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 
+// AI Characters data matching HomePage
+const aiCharacters = [
+  {
+    id: 'mood-matcher',
+    name: 'Mood Matcher',
+    emoji: '🩷',
+    background: '#FCE7F3',
+    avatarColors: {
+      body: '#FBCFE8',
+      head: '#F9A8D4',
+      cheeks: '#F472B6',
+      eyes: '#1F2937',
+      mouth: '#374151',
+    },
+  },
+  {
+    id: 'recipe-helper',
+    name: 'Recipe Helper',
+    emoji: '🥕',
+    background: '#FFEDD5',
+    avatarColors: {
+      body: '#FED7AA',
+      head: '#FDBA74',
+      cheeks: '#FB923C',
+      eyes: '#1F2937',
+      mouth: '#374151',
+    },
+  },
+  {
+    id: 'experienced-explorer',
+    name: 'Experienced Explorer',
+    emoji: '🌍',
+    background: '#DCFCE7',
+    avatarColors: {
+      body: '#BBF7D0',
+      head: '#86EFAC',
+      cheeks: '#4ADE80',
+      eyes: '#1F2937',
+      mouth: '#374151',
+    },
+  },
+  {
+    id: 'play-mode-bot',
+    name: 'Play Mode Bot',
+    emoji: '🎮',
+    background: '#F3E8FF',
+    avatarColors: {
+      body: '#E9D5FF',
+      head: '#D8B4FE',
+      cheeks: '#A78BFA',
+      eyes: '#1F2937',
+      mouth: '#374151',
+    },
+  },
+];
+
 const chatHistory = [
   {
     id: '1',
-    character: { name: 'Buzzy', emoji: '🐰', background: '#FCE7F3' },
-    lastMessage: 'How about some comfort ramen for this rainy day?',
+    character: aiCharacters[0], // Mood Matcher (pink)
+    lastMessage: "Need some comfort food? Let's match your mood 💗",
     timestamp: '2 hours ago',
     unread: 2,
   },
   {
     id: '2',
-    character: { name: 'Luma', emoji: '🐱', background: '#DCFCE7' },
-    lastMessage: 'I found a perfect pasta recipe for you!',
+    character: aiCharacters[1], // Recipe Helper (yellow)
+    lastMessage: 'Found a perfect recipe with your ingredients!',
     timestamp: 'Yesterday',
     unread: 0,
   },
   {
     id: '3',
-    character: { name: 'Foxy', emoji: '🦊', background: '#E9D5FF' },
-    lastMessage: ",Ready for today's food challenge?",
+    character: aiCharacters[2], // Experienced Explorer (green)
+    lastMessage: 'Try that hidden gem restaurant I mentioned!',
     timestamp: '2 days ago',
     unread: 1,
   },
   {
     id: '4',
-    character: { name: 'Truffina', emoji: '🐶', background: '#FFEDD5' },
-    lastMessage: ",Did you know it's National Taco Day?",
+    character: aiCharacters[3], // Play Mode Bot (purple)
+    lastMessage: "Ready for a fun food challenge game?",
     timestamp: '3 days ago',
     unread: 0,
   },
 ];
+
+// FlatAvatar component matching HomePage
+const FlatAvatar = ({ colors }: { colors: any }) => (
+  <View style={styles.avatarContainer}>
+    {/* Body */}
+    <View style={[styles.avatarBody, { backgroundColor: colors.body }]} />
+    {/* Head */}
+    <View style={[styles.avatarHead, { backgroundColor: colors.head }]}>
+      {/* Eyes */}
+      <View style={[styles.avatarEye, { left: 12, backgroundColor: colors.eyes }]} />
+      <View style={[styles.avatarEye, { right: 12, backgroundColor: colors.eyes }]} />
+      {/* Mouth */}
+      <View style={[styles.avatarMouth, { backgroundColor: colors.mouth }]} />
+      {/* Cheeks */}
+      <View style={[styles.avatarCheek, { left: 6, backgroundColor: colors.cheeks }]} />
+      <View style={[styles.avatarCheek, { right: 6, backgroundColor: colors.cheeks }]} />
+    </View>
+    {/* Arms */}
+    <View style={[styles.avatarArm, { left: 0, backgroundColor: colors.body, transform: [{ rotate: '-12deg' }] }]} />
+    <View style={[styles.avatarArm, { right: 0, backgroundColor: colors.body, transform: [{ rotate: '12deg' }] }]} />
+  </View>
+);
 
 export default function ChatPage() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
@@ -49,7 +127,7 @@ export default function ChatPage() {
             <Text style={styles.headerIcon}>💬</Text>
             <Text style={styles.headerTitle}>Chat History</Text>
           </View>
-          <Text style={styles.headerSubtitle}>Continue your conversations with AI companions</Text>
+          <Text style={styles.headerSubtitle}>Continue your AI conversations</Text>
         </View>
 
         {/* Chat List */}
@@ -70,24 +148,17 @@ export default function ChatPage() {
                 <View style={styles.cardContent}>
                   {/* Character Avatar */}
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarEmoji}>{chat.character.emoji}</Text>
+                    <FlatAvatar colors={chat.character.avatarColors} />
                   </View>
                   {/* Chat Info */}
                   <View style={styles.chatInfoBox}>
                     <View style={styles.chatInfoHeader}>
                       <Text style={styles.cardTitle}>{chat.character.name}</Text>
-                      <View style={styles.chatInfoRight}>
-                        {chat.unread > 0 && (
-                          <View style={styles.unreadDot}>
-                            <Text style={styles.unreadDotText}>{chat.unread}</Text>
-                          </View>
-                        )}
-                        <View style={styles.timestampRow}>
-                          {/* <Clock /> */}
-                          <Text style={styles.clockIcon}>⏰</Text>
-                          <Text style={styles.timestampText}>{chat.timestamp}</Text>
+                      {chat.unread > 0 && (
+                        <View style={styles.unreadDot}>
+                          <Text style={styles.unreadDotText}>{chat.unread}</Text>
                         </View>
-                      </View>
+                      )}
                     </View>
                     <Text style={styles.lastMessage} numberOfLines={1}>{chat.lastMessage}</Text>
                   </View>
@@ -97,10 +168,7 @@ export default function ChatPage() {
           })}
         </View>
 
-        {/* Start New Chat */}
-        <TouchableOpacity style={styles.newChatBtn} activeOpacity={0.85}>
-          <Text style={styles.newChatBtnText}>Start New Chat</Text>
-        </TouchableOpacity>
+
       </ScrollView>
     </View>
   );
@@ -119,17 +187,18 @@ const styles = StyleSheet.create({
   cardSelected: { borderWidth: 2, borderColor: '#D1D5DB', shadowOpacity: 0.18, elevation: 3, transform: [{ scale: 1.02 }] },
   cardContent: { flexDirection: 'row', alignItems: 'center', padding: 20 },
   avatarBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.5)', alignItems: 'center', justifyContent: 'center', marginRight: 16, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 4, elevation: 1 },
-  avatarEmoji: { fontSize: 32 },
   chatInfoBox: { flex: 1, minWidth: 0 },
   chatInfoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
   cardTitle: { fontSize: 17, fontWeight: 'bold', color: '#1F2937' },
-  chatInfoRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  unreadDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', marginRight: 6 },
+  unreadDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center' },
   unreadDotText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  timestampRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  clockIcon: { fontSize: 13, color: '#6B7280', marginRight: 2 },
-  timestampText: { fontSize: 12, color: '#6B7280' },
   lastMessage: { fontSize: 14, color: '#6B7280', fontWeight: '500', marginTop: 2 },
-  newChatBtn: { marginHorizontal: 24, marginTop: 16, backgroundColor: '#FB7185', borderRadius: 32, paddingVertical: 16, alignItems: 'center', shadowColor: '#FB7185', shadowOpacity: 0.18, shadowRadius: 8, elevation: 2 },
-  newChatBtnText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  // FlatAvatar styles
+  avatarContainer: { width: 48, height: 48, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  avatarBody: { position: 'absolute', bottom: 0, left: 12, width: 24, height: 14, borderRadius: 12 },
+  avatarHead: { position: 'absolute', top: 0, left: 6, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  avatarEye: { position: 'absolute', top: 12, width: 4, height: 4, borderRadius: 2 },
+  avatarMouth: { position: 'absolute', top: 21, left: 15, width: 6, height: 3, borderRadius: 1.5 },
+  avatarCheek: { position: 'absolute', top: 15, width: 4, height: 3, borderRadius: 1.5, opacity: 0.6 },
+  avatarArm: { position: 'absolute', top: 27, width: 6, height: 12, borderRadius: 3 },
 }); 

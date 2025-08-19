@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Modal } from 'react-native';
 
 const characters = [
   {
     id: 'mood-matcher',
     name: 'Mood Matcher',
-    tagline: "Let's find comfort together",
+    tagline: "Comfort food for your mood",
     emoji: '🩷',
-    description: 'A gentle, empathetic bot who understands your emotions and gives comforting food suggestions',
+    description: 'Understands your emotions',
     background: '#FCE7F3',
     accent: '#FBCFE8',
     border: '#F9A8D4',
@@ -23,9 +23,9 @@ const characters = [
   {
     id: 'recipe-helper',
     name: 'Recipe Helper',
-    tagline: 'Your caring kitchen companion',
+    tagline: 'Kitchen companion',
     emoji: '🥕',
-    description: 'A caring kitchen companion who helps you decide what to cook',
+    description: 'Helps you cook',
     background: '#FFEDD5',
     accent: '#FED7AA',
     border: '#FDBA74',
@@ -40,10 +40,10 @@ const characters = [
   },
   {
     id: 'experienced-explorer',
-    name: 'Experienced Explorer',
-    tagline: 'Discover hidden culinary gems',
+    name: 'Explorer',
+    tagline: 'Find hidden gems',
     emoji: '🌍',
-    description: 'A wise culinary adventurer who knows the hidden gems around the world',
+    description: 'Discovers new places',
     background: '#DCFCE7',
     accent: '#BBF7D0',
     border: '#86EFAC',
@@ -58,10 +58,10 @@ const characters = [
   },
   {
     id: 'play-mode-bot',
-    name: 'Play Mode Bot',
-    tagline: "Let's play to decide!",
+    name: 'Game Bot',
+    tagline: "Let's play!",
     emoji: '🎮',
-    description: 'A fun, playful bot that helps you choose food through interactive games',
+    description: 'Fun food games',
     background: '#F3E8FF',
     accent: '#E9D5FF',
     border: '#D8B4FE',
@@ -83,6 +83,42 @@ const quickActions = [
   { id: 'diary', label: 'My Food Diary', emoji: '📓', background: '#DCFCE7' },
   { id: 'festival', label: 'Festival Tip', emoji: '✨', background: '#FEF9C3' },
 ];
+
+// User preferences data from onboarding
+const userPreferences = {
+  eatingPreference: 'omnivore',
+  foodsToAvoid: ['spicy', 'organ-meats'],
+  allergies: ['no-allergies'],
+  profileData: {
+    name: 'Zihan',
+    joinDate: 'January 2024',
+    completedChats: 12,
+    favoriteCuisines: ['Italian', 'Japanese', 'Mediterranean'],
+  }
+};
+
+// Preference display mapping
+const preferenceLabels: Record<string, { text: string; emoji: string; color: string }> = {
+  // Eating preferences
+  'vegetarian': { text: 'Vegetarian', emoji: '🥗', color: '#D1FAE5' },
+  'vegan': { text: 'Vegan', emoji: '🌱', color: '#A7F3D0' },
+  'omnivore': { text: 'Omnivore', emoji: '🍖', color: '#FED7AA' },
+  'not-sure': { text: 'Not sure', emoji: '❓', color: '#DDD6FE' },
+  
+  // Foods to avoid
+  'spicy': { text: 'Spicy food', emoji: '🌶️', color: '#FECACA' },
+  'seafood': { text: 'Seafood', emoji: '🐟', color: '#BFDBFE' },
+  'onion-garlic': { text: 'Onion / Garlic', emoji: '🧄', color: '#FEF3C7' },
+  'organ-meats': { text: 'Organ meats', emoji: '🐷', color: '#FBCFE8' },
+  'none': { text: 'None', emoji: '🚫', color: '#E5E7EB' },
+  
+  // Allergies
+  'peanuts': { text: 'Peanuts', emoji: '🥜', color: '#FDE68A' },
+  'dairy': { text: 'Dairy', emoji: '🥛', color: '#BFDBFE' },
+  'gluten': { text: 'Gluten', emoji: '🍞', color: '#FEF3C7' },
+  'eggs': { text: 'Eggs', emoji: '🥚', color: '#FED7AA' },
+  'no-allergies': { text: 'No allergies', emoji: '✅', color: '#D1FAE5' },
+};
 
 const FlatAvatar = ({ colors }: { colors: any }) => (
   <View style={styles.avatarContainer}>
@@ -106,21 +142,21 @@ const FlatAvatar = ({ colors }: { colors: any }) => (
 );
 
 function getSeasonalPick() {
-  // 这里只做简单季节推荐，节日可后续补充
   const month = new Date().getMonth() + 1;
   if (month >= 3 && month <= 5) {
-    return { dish: 'Fresh Seasonal Salad Bowl', reason: "Embrace spring's renewal with crisp, fresh ingredients", emoji: '🥗', type: 'seasonal', decorations: ['🌸', '🦋', '🌿'] };
+    return { dish: 'Fresh Spring Salad', reason: "Perfect for spring", emoji: '🥗', type: 'seasonal', decorations: ['🌸', '🦋', '🌿'] };
   } else if (month >= 6 && month <= 8) {
-    return { dish: 'Chilled Gazpacho Soup', reason: 'Cool down with refreshing summer flavors', emoji: '🍅', type: 'seasonal', decorations: ['☀️', '🌊', '🧊'] };
+    return { dish: 'Cold Gazpacho', reason: 'Cool summer vibes', emoji: '🍅', type: 'seasonal', decorations: ['☀️', '🌊', '🧊'] };
   } else if (month >= 9 && month <= 11) {
-    return { dish: 'Roasted Root Vegetable Medley', reason: "Savor autumn's harvest with warming, earthy flavors", emoji: '🥕', type: 'seasonal', decorations: ['🍂', '🌾', '🎃'] };
+    return { dish: 'Roasted Vegetables', reason: "Cozy autumn flavors", emoji: '🥕', type: 'seasonal', decorations: ['🍂', '🌾', '🎃'] };
   } else {
-    return { dish: 'Comforting Bone Broth Ramen', reason: 'Warm your soul with nourishing winter comfort food', emoji: '🍜', type: 'seasonal', decorations: ['❄️', '🔥', '🧣'] };
+    return { dish: 'Hot Ramen Bowl', reason: 'Winter comfort food', emoji: '🍜', type: 'seasonal', decorations: ['❄️', '🔥', '🧣'] };
   }
 }
 
 export default function HomePage({ eatingPreference = 'unsure', onBotSelect, onMoodMatchSelect }: { eatingPreference?: string; onBotSelect?: (botId: string) => void; onMoodMatchSelect?: () => void }) {
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const seasonalPick = getSeasonalPick();
 
   const handleCharacterSelect = (characterId: string) => {
@@ -133,7 +169,7 @@ export default function HomePage({ eatingPreference = 'unsure', onBotSelect, onM
   };
 
   const handleQuickAction = (actionId: string) => {
-    // 可集成导航或功能
+    // Can integrate navigation or functionality
   };
 
   return (
@@ -141,19 +177,21 @@ export default function HomePage({ eatingPreference = 'unsure', onBotSelect, onM
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Greeting Section */}
         <View style={styles.greetingSection}>
-          <View style={styles.profilePic}><Text style={{ fontSize: 28 }}>👤</Text></View>
+          <TouchableOpacity style={styles.profilePic} onPress={() => setShowProfileModal(true)} activeOpacity={0.8}>
+            <Text style={{ fontSize: 28 }}>👤</Text>
+          </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.greetingTitle}>Hi, Zihan!</Text>
-            <Text style={styles.greetingSubtitle}>Ready for today's taste adventure?</Text>
+            <Text style={styles.greetingSubtitle}>What sounds good today?</Text>
             <Text style={{ color: '#FB7185', fontWeight: 'bold', marginTop: 6 }}>
-              Your eating preference: {eatingPreference}
+              {eatingPreference}
             </Text>
           </View>
         </View>
 
         {/* AI Bot Selection Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}><Text style={{ fontSize: 20 }}>🧸</Text> Choose Your AI Companion</Text>
+          <Text style={styles.sectionTitle}><Text style={{ fontSize: 20 }}>🧸</Text> Pick Your AI</Text>
           <View style={styles.characterGrid}>
             {characters.map((character) => {
               const isSelected = selectedCharacter === character.id;
@@ -178,7 +216,7 @@ export default function HomePage({ eatingPreference = 'unsure', onBotSelect, onM
 
         {/* Seasonal Pick Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}><Text style={{ fontSize: 20 }}>🍽️</Text> Today's Pick</Text>
+          <Text style={styles.sectionTitle}><Text style={{ fontSize: 20 }}>🍽️</Text> Today's Special</Text>
           <View style={styles.seasonalCard}>
             <View style={styles.seasonalCardContent}>
               <View style={{ alignItems: 'center', marginRight: 16 }}>
@@ -199,7 +237,7 @@ export default function HomePage({ eatingPreference = 'unsure', onBotSelect, onM
 
         {/* Quick Actions Row */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}><Text style={{ fontSize: 20 }}>⚡</Text> Quick Actions</Text>
+          <Text style={styles.sectionTitle}><Text style={{ fontSize: 20 }}>⚡</Text> Quick</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickActionsRow}>
             {quickActions.map((action) => (
               <TouchableOpacity
@@ -215,6 +253,83 @@ export default function HomePage({ eatingPreference = 'unsure', onBotSelect, onM
           </ScrollView>
         </View>
       </ScrollView>
+
+      {/* User Profile Modal */}
+      <Modal
+        visible={showProfileModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowProfileModal(false)} style={styles.modalCloseButton}>
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>My Profile</Text>
+            <View style={styles.modalPlaceholder} />
+          </View>
+          
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            {/* Profile Info */}
+            <View style={styles.profileSection}>
+              <View style={styles.profileAvatar}>
+                <Text style={{ fontSize: 48 }}>👤</Text>
+              </View>
+              <Text style={styles.profileName}>{userPreferences.profileData.name}</Text>
+              <Text style={styles.profileJoinDate}>Since {userPreferences.profileData.joinDate}</Text>
+              <Text style={styles.profileStats}>{userPreferences.profileData.completedChats} chats</Text>
+            </View>
+
+            {/* Eating Preference */}
+            <View style={styles.preferenceSection}>
+              <Text style={styles.preferenceSectionTitle}>🍽️ Diet</Text>
+              <View style={[styles.preferenceCard, { backgroundColor: preferenceLabels[userPreferences.eatingPreference].color }]}>
+                <Text style={styles.preferenceEmoji}>{preferenceLabels[userPreferences.eatingPreference].emoji}</Text>
+                <Text style={styles.preferenceText}>{preferenceLabels[userPreferences.eatingPreference].text}</Text>
+              </View>
+            </View>
+
+            {/* Foods to Avoid */}
+            <View style={styles.preferenceSection}>
+              <Text style={styles.preferenceSectionTitle}>🚫 Avoid</Text>
+              <View style={styles.preferenceGrid}>
+                {userPreferences.foodsToAvoid.map((item, index) => (
+                  <View key={index} style={[styles.preferenceCard, { backgroundColor: preferenceLabels[item].color }]}>
+                    <Text style={styles.preferenceEmoji}>{preferenceLabels[item].emoji}</Text>
+                    <Text style={styles.preferenceText}>{preferenceLabels[item].text}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Allergies */}
+            <View style={styles.preferenceSection}>
+              <Text style={styles.preferenceSectionTitle}>⚠️ Allergies</Text>
+              <View style={styles.preferenceGrid}>
+                {userPreferences.allergies.map((item, index) => (
+                  <View key={index} style={[styles.preferenceCard, { backgroundColor: preferenceLabels[item].color }]}>
+                    <Text style={styles.preferenceEmoji}>{preferenceLabels[item].emoji}</Text>
+                    <Text style={styles.preferenceText}>{preferenceLabels[item].text}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Favorite Cuisines */}
+            <View style={styles.preferenceSection}>
+              <Text style={styles.preferenceSectionTitle}>❤️ Favorites</Text>
+              <View style={styles.cuisineGrid}>
+                {userPreferences.profileData.favoriteCuisines.map((cuisine, index) => (
+                  <View key={index} style={styles.cuisineCard}>
+                    <Text style={styles.cuisineText}>{cuisine}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }
@@ -252,4 +367,28 @@ const styles = StyleSheet.create({
   avatarMouth: { position: 'absolute', top: 28, left: 20, width: 8, height: 4, borderRadius: 2 },
   avatarCheek: { position: 'absolute', top: 20, width: 6, height: 4, borderRadius: 2, opacity: 0.6 },
   avatarArm: { position: 'absolute', top: 36, width: 8, height: 16, borderRadius: 4 },
+  // Modal styles
+  modalContainer: { flex: 1, backgroundColor: '#FFF7ED' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  modalCloseButton: { padding: 8, borderRadius: 20, backgroundColor: '#F3F4F6' },
+  modalCloseText: { fontSize: 16, color: '#6B7280', fontWeight: 'bold' },
+  modalTitle: { flex: 1, fontSize: 20, fontWeight: 'bold', color: '#1F2937', textAlign: 'center' },
+  modalPlaceholder: { width: 50 },
+  modalContent: { flex: 1, paddingHorizontal: 20 },
+  // Profile section
+  profileSection: { alignItems: 'center', paddingVertical: 30, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  profileAvatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#FBCFE8', alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 3 },
+  profileName: { fontSize: 24, fontWeight: 'bold', color: '#1F2937', marginBottom: 4 },
+  profileJoinDate: { fontSize: 14, color: '#6B7280', marginBottom: 2 },
+  profileStats: { fontSize: 14, color: '#FB7185', fontWeight: '600' },
+  // Preference sections
+  preferenceSection: { paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  preferenceSectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937', marginBottom: 12 },
+  preferenceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  preferenceCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, marginBottom: 8, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 1 },
+  preferenceEmoji: { fontSize: 16, marginRight: 8 },
+  preferenceText: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  cuisineGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  cuisineCard: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 1, marginBottom: 8 },
+  cuisineText: { fontSize: 14, fontWeight: '600', color: '#374151' },
 }); 

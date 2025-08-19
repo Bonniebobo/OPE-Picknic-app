@@ -89,10 +89,11 @@ export default function CuisinePreferenceScreen({ onComplete, onSkip }: CuisineP
                     style={[
                       styles.optionButton,
                       {
-                        backgroundColor: isSelected ? '#FDE68A' : '#F3F4F6',
-                        borderColor: isSelected ? '#F59E42' : 'transparent',
+                        backgroundColor: isSelected ? '#FDE68A' : 'rgba(255,255,255,0.95)',
+                        borderColor: isSelected ? '#FB7185' : 'rgba(229, 231, 235, 0.8)',
                         transform: [{ scale: isSelected ? 1.02 : 1 }],
-                        shadowOpacity: isSelected ? 0.18 : 0.12,
+                        shadowOpacity: isSelected ? 0.15 : 0.08,
+                        shadowColor: isSelected ? '#FB7185' : '#000',
                       },
                     ]}
                     activeOpacity={0.85}
@@ -101,7 +102,7 @@ export default function CuisinePreferenceScreen({ onComplete, onSkip }: CuisineP
                       <View
                         style={[
                           styles.optionEmojiBox,
-                          { backgroundColor: isSelected ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.5)' },
+                          { backgroundColor: isSelected ? 'rgba(255,255,255,0.9)' : 'rgba(243, 244, 246, 0.8)' },
                         ]}
                       >
                         <Text style={styles.optionEmoji}>{option.emoji}</Text>
@@ -193,16 +194,16 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     width: '100%',
-    padding: 20,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 18,
     borderWidth: 2,
-    marginBottom: 16,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
   },
   optionRow: {
     flexDirection: 'row',
@@ -212,20 +213,25 @@ const styles = StyleSheet.create({
   optionEmojiBox: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
   optionEmoji: {
-    fontSize: 28,
+    fontSize: 20,
   },
   optionContent: {
     flex: 1,
   },
   optionLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1F2937',
   },
   optionDesc: {
@@ -237,17 +243,16 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#F59E42',
+    backgroundColor: '#FB7185',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
   },
   selectedIndicatorInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#F59E42',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
   bottomNavRow: {
     flexDirection: 'row',
@@ -258,29 +263,41 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   skipButton: {
-    paddingVertical: 12,
+    backgroundColor: 'transparent',
+    borderRadius: 24,
+    paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
   },
   skipButtonText: {
-    color: '#6B7280',
-    fontWeight: 'bold',
+    color: '#9CA3AF',
     fontSize: 16,
+    fontWeight: '500',
   },
   continueButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-    backgroundColor: '#F59E42',
+    backgroundColor: '#FB7185',
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FB7185',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+    minWidth: 140,
   },
   continueButtonDisabled: {
     backgroundColor: '#F3F4F6',
   },
   continueButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
+    fontSize: 17,
     fontWeight: 'bold',
-    fontSize: 16,
+    letterSpacing: 0.5,
   },
   continueButtonTextDisabled: {
     color: '#BDBDBD',

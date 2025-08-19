@@ -33,30 +33,30 @@ export interface EdamamRecipeResponse {
 }
 
 /**
- * 根据菜名从 Edamam API 获取详细菜谱信息
+ * Get detailed recipe information from Edamam API based on recipe name
  */
 export async function fetchRecipeDetails(recipeName: string): Promise<DetailedRecipe | null> {
   try {
-    console.log('[EdamamAPI] 开始搜索菜谱:', recipeName);
+    console.log('[EdamamAPI] Starting recipe search:', recipeName);
     
-    // 验证 API 凭据
+    // Validate API credentials
     if (!EDAMAM_ID || !EDAMAM_KEY) {
-      console.error('[EdamamAPI] 缺少 API 凭据');
+      console.error('[EdamamAPI] Missing API credentials');
       return null;
     }
 
-    // 构建查询参数
+    // Build query parameters
     const queryParams = new URLSearchParams({
       q: recipeName,
       type: 'public',
       app_id: EDAMAM_ID,
       app_key: EDAMAM_KEY,
       from: '0',
-      to: '5', // 获取前5个结果
+      to: '5', // Get top 5 results
     });
 
     const url = `https://api.edamam.com/api/recipes/v2?${queryParams.toString()}`;
-    console.log('[EdamamAPI] 请求URL:', url);
+    console.log('[EdamamAPI] Request URL:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -66,38 +66,38 @@ export async function fetchRecipeDetails(recipeName: string): Promise<DetailedRe
       },
     });
 
-    console.log('[EdamamAPI] 响应状态:', response.status);
+    console.log('[EdamamAPI] Response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[EdamamAPI] 请求失败:', response.status, errorText);
+      console.error('[EdamamAPI] Request failed:', response.status, errorText);
       return null;
     }
 
     const data: EdamamRecipeResponse = await response.json();
-    console.log('[EdamamAPI] 找到', data.hits?.length || 0, '个菜谱');
+    console.log('[EdamamAPI] Found', data.hits?.length || 0, 'recipes');
 
     if (!data.hits || data.hits.length === 0) {
-      console.log('[EdamamAPI] 未找到匹配的菜谱:', recipeName);
+      console.log('[EdamamAPI] No matching recipes found:', recipeName);
       return null;
     }
 
-    // 取第一个最匹配的结果
+    // Take the first best matching result
     const firstMatch = data.hits[0].recipe;
-    console.log('[EdamamAPI] 选择菜谱:', firstMatch.label);
+    console.log('[EdamamAPI] Selected recipe:', firstMatch.label);
 
     const detailedRecipe: DetailedRecipe = {
       name: firstMatch.label,
       image: firstMatch.image || '',
       ingredients: firstMatch.ingredientLines || [],
       url: firstMatch.url,
-      cookTime: firstMatch.totalTime ? `${firstMatch.totalTime} 分钟` : undefined,
-      servings: firstMatch.yield ? `${firstMatch.yield} 人份` : undefined,
+      cookTime: firstMatch.totalTime ? `${firstMatch.totalTime} minutes` : undefined,
+      servings: firstMatch.yield ? `${firstMatch.yield} servings` : undefined,
       calories: firstMatch.calories ? Math.round(firstMatch.calories) : undefined,
       source: firstMatch.source || 'Edamam',
     };
 
-    console.log('[EdamamAPI] 解析完成:', {
+    console.log('[EdamamAPI] Parsing complete:', {
       name: detailedRecipe.name,
       ingredientsCount: detailedRecipe.ingredients.length,
       hasImage: !!detailedRecipe.image,
@@ -107,16 +107,16 @@ export async function fetchRecipeDetails(recipeName: string): Promise<DetailedRe
     return detailedRecipe;
 
   } catch (error) {
-    console.error('[EdamamAPI] 请求异常:', error);
+    console.error('[EdamamAPI] Request exception:', error);
     return null;
   }
 }
 
 /**
- * 批量获取多个菜谱的详细信息
+ * Batch get detailed information for multiple recipes
  */
 export async function fetchMultipleRecipeDetails(recipeNames: string[]): Promise<DetailedRecipe[]> {
-  console.log('[EdamamAPI] 批量获取菜谱详情:', recipeNames);
+  console.log('[EdamamAPI] Batch getting recipe details:', recipeNames);
   
   const promises = recipeNames.map(name => fetchRecipeDetails(name));
   const results = await Promise.allSettled(promises);
@@ -127,25 +127,25 @@ export async function fetchMultipleRecipeDetails(recipeNames: string[]): Promise
     )
     .map(result => result.value!);
 
-  console.log('[EdamamAPI] 批量获取完成:', successfulResults.length, '/', recipeNames.length);
+  console.log('[EdamamAPI] Batch get complete:', successfulResults.length, '/', recipeNames.length);
   return successfulResults;
 }
 
 /**
- * 搜索相似菜谱（用于推荐）
+ * Search similar recipes (for recommendations)
  */
 export async function searchSimilarRecipes(baseRecipeName: string, count: number = 3): Promise<DetailedRecipe[]> {
   try {
-    console.log('[EdamamAPI] 搜索相似菜谱:', baseRecipeName);
+    console.log('[EdamamAPI] Searching similar recipes:', baseRecipeName);
     
     if (!EDAMAM_ID || !EDAMAM_KEY) {
-      console.error('[EdamamAPI] 缺少 API 凭据');
+      console.error('[EdamamAPI] Missing API credentials');
       return [];
     }
 
-    // 提取关键词进行搜索
+    // Extract keywords for search
     const keywords = baseRecipeName.split(/[\s,，]/).filter(word => word.length > 1);
-    const searchQuery = keywords.slice(0, 2).join(' '); // 使用前两个关键词
+    const searchQuery = keywords.slice(0, 2).join(' '); // Use first two keywords
 
     const queryParams = new URLSearchParams({
       q: searchQuery,
@@ -160,7 +160,7 @@ export async function searchSimilarRecipes(baseRecipeName: string, count: number
     const response = await fetch(url);
 
     if (!response.ok) {
-      console.error('[EdamamAPI] 相似菜谱搜索失败:', response.status);
+      console.error('[EdamamAPI] Similar recipe search failed:', response.status);
       return [];
     }
 
@@ -170,17 +170,17 @@ export async function searchSimilarRecipes(baseRecipeName: string, count: number
       image: hit.recipe.image || '',
       ingredients: hit.recipe.ingredientLines || [],
       url: hit.recipe.url,
-      cookTime: hit.recipe.totalTime ? `${hit.recipe.totalTime} 分钟` : undefined,
-      servings: hit.recipe.yield ? `${hit.recipe.yield} 人份` : undefined,
+      cookTime: hit.recipe.totalTime ? `${hit.recipe.totalTime} minutes` : undefined,
+      servings: hit.recipe.yield ? `${hit.recipe.yield} servings` : undefined,
       calories: hit.recipe.calories ? Math.round(hit.recipe.calories) : undefined,
       source: hit.recipe.source || 'Edamam',
     })) || [];
 
-    console.log('[EdamamAPI] 找到', recipes.length, '个相似菜谱');
+    console.log('[EdamamAPI] Found', recipes.length, 'similar recipes');
     return recipes;
 
   } catch (error) {
-    console.error('[EdamamAPI] 相似菜谱搜索异常:', error);
+    console.error('[EdamamAPI] Similar recipe search exception:', error);
     return [];
   }
 } 

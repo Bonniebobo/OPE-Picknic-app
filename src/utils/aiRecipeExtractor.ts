@@ -113,8 +113,8 @@ function tryParseJsonFormat(response: string): ParsedRecommendationResult {
 }
 
 /**
- * 尝试解析 Markdown 格式
- * 例如：
+ * Try to parse Markdown format
+ * Example:
  * Recommended Dishes:
  * 1. **Beef and Tomato Stew**
  * - Cooking Time: 90 minutes
@@ -199,7 +199,7 @@ function parseMarkdownRecipeItem(itemText: string, index: number): RecommendedRe
     
     console.log('[StructuredParser] Extracted recipe name:', name, 'English name:', englishName);
     
-    // 提取各个属性 - 支持英文关键词
+    // Extract properties - support English keywords
     const cookingTime = extractProperty(itemText, ['Cooking Time', 'Cook Time', 'Time', 'Duration']) || 'About 30 minutes';
     const difficulty = extractProperty(itemText, ['Difficulty', 'Level']) || 'Medium';
     const taste = extractProperty(itemText, ['Taste', 'Flavor', 'Flavor Profile']) || 'Delicious';

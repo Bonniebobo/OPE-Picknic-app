@@ -107,7 +107,7 @@ Recommended Dishes:
 
 CRITICAL REQUIREMENTS:
 - NO CHINESE text whatsoever - everything must be in English
-- Recipe names must be standard English names (e.g., "Beef and Tomato Stew" not "西红柿炖牛肉")
+- Recipe names must be standard English names (e.g., "Beef and Tomato Stew")
 - Always respond with TEXT ONLY, never audio
 - Always respond with actual text content, never empty responses
 - When recommending recipes, STRICTLY follow the English Markdown format above
