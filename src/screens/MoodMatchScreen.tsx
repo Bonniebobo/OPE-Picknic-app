@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Audio } from 'expo-av';
 
 interface MoodMatchScreenProps {
   onBack: () => void;
 }
 
-const WEB_CONSOLE_URL = 'https://live-api-web-console-https-w-git-278998-bobos-projects-ba40eeb2.vercel.app';
+const WEB_CONSOLE_URL = 'https://live-api-web-console-https-webview.vercel.app/';
 
 export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -120,49 +119,6 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
     setRetryCount(prev => prev + 1);
   };
 
-  const playTestAudio = async () => {
-    try {
-      console.log('🔊 Attempting to play test audio...');
-      
-      // 首先测试音频权限和模式设置
-      console.log('🔊 Setting up audio mode...');
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        staysActiveInBackground: false,
-        playThroughEarpieceAndroid: false,
-      });
-      console.log('🔊 Audio mode set successfully');
-      
-      // 使用本地音频文件测试
-      console.log('🔊 Creating audio sound from local file...');
-      const { sound } = await Audio.Sound.createAsync(require('../../assets/test.mp3'));
-      console.log('🔊 Audio sound created successfully');
-      
-      console.log('🔊 Starting playback...');
-      await sound.playAsync();
-      console.log('🔊 Test audio started playing');
-      
-      sound.setOnPlaybackStatusUpdate((status) => {
-        console.log('🔊 Playback status:', status);
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-          console.log('🔊 Test audio finished');
-        }
-      });
-      
-    } catch (e) {
-      console.error('❌ Test audio error:', e);
-      console.error('❌ Error details:', JSON.stringify(e, null, 2));
-      console.log('💡 This suggests there might be an audio permission or configuration issue');
-      console.log('💡 Please check:');
-      console.log('   - Audio permissions in app settings');
-      console.log('   - Device volume settings');
-      console.log('   - test.mp3 file exists in assets folder');
-    }
-  };
-
   const webViewConfig = {
     allowsInlineMediaPlayback: true,
     mediaPlaybackRequiresUserAction: false,
@@ -187,19 +143,19 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
     cacheEnabled: false,
     incognito: false,
     
-         onShouldStartLoadWithRequest: (request: any) => {
-       console.log('WebView request:', request.url);
-       console.log('Request method:', request.method);
-       console.log('Request headers:', request.headers);
-       
-       // 允许所有 Vercel 相关的请求在 WebView 中处理
-       if (request.url.includes('vercel.com') || request.url.includes('live-api-web-console')) {
-         return true;
-       }
-       
-       // 对于其他外部链接，可以选择是否在 WebView 中打开
-       return true;
-     },
+    onShouldStartLoadWithRequest: (request: any) => {
+      console.log('WebView request:', request.url);
+      console.log('Request method:', request.method);
+      console.log('Request headers:', request.headers);
+      
+      // 允许所有 Vercel 相关的请求在 WebView 中处理
+      if (request.url.includes('vercel.com') || request.url.includes('live-api-web-console')) {
+        return true;
+      }
+      
+      // 对于其他外部链接，可以选择是否在 WebView 中打开
+      return true;
+    },
     
     onError: handleError,
     onHttpError: handleHttpError,
@@ -251,10 +207,6 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
         <Text style={styles.headerTitle}>Mood Match</Text>
         <View style={styles.placeholder} />
       </View>
-      {/* Test Audio Button */}
-      <TouchableOpacity onPress={playTestAudio} style={{margin: 20, padding: 10, backgroundColor: '#eee', borderRadius: 8, alignItems: 'center'}}>
-        <Text style={{fontWeight: 'bold'}}>Play Test Audio</Text>
-      </TouchableOpacity>
       <View style={styles.webViewContainer}>
         {isLoading && (
           <View style={styles.loadingContainer}>
@@ -263,7 +215,7 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
           </View>
         )}
         
-                          <WebView
+        <WebView
           source={{ 
             uri: WEB_CONSOLE_URL,
             headers: {
@@ -272,26 +224,26 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
               'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1'
             }
           }}
-            style={styles.webView}
-            onLoadStart={handleLoadStart}
-            onLoadEnd={handleLoadEnd}
-            startInLoadingState={true}
-            renderLoading={() => <View />}
-            {...webViewConfig}
-            cacheEnabled={false}
-            incognito={false}
-            allowsFullscreenVideo={true}
-            allowsInlineMediaPlayback={true}
-            mediaPlaybackRequiresUserAction={false}
-            allowsCamera={true}
-            allowsMicrophone={true}
-            allowsLocation={true}
-            onSSLError={() => {
-              console.log('SSL Error ignored for development');
-              return true;
-            }}
-            onMessage={handleMessage}
-                     injectedJavaScript={`
+          style={styles.webView}
+          onLoadStart={handleLoadStart}
+          onLoadEnd={handleLoadEnd}
+          startInLoadingState={true}
+          renderLoading={() => <View />}
+          {...webViewConfig}
+          cacheEnabled={false}
+          incognito={false}
+          allowsFullscreenVideo={true}
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
+          allowsCamera={true}
+          allowsMicrophone={true}
+          allowsLocation={true}
+          onSSLError={() => {
+            console.log('SSL Error ignored for development');
+            return true;
+          }}
+          onMessage={handleMessage}
+          injectedJavaScript={`
              (function() {
                console.log('WebView JavaScript injected successfully');
                
@@ -384,7 +336,6 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                        audio.parentNode.removeChild(audio);
                      }
                    };
-                   
                  } catch (error) {
                    console.error('🔊 WebView: Error creating AI audio element:', error);
                  }
@@ -414,276 +365,230 @@ export default function MoodMatchScreen({ onBack }: MoodMatchScreenProps) {
                      
                      return context;
                    };
-                   
-                   // 复制原型
                    window.AudioContext.prototype = OriginalAudioContext.prototype;
-                   window.AudioContext.CONSTANTS = OriginalAudioContext.CONSTANTS;
+                   
+                   // 同样处理webkitAudioContext
+                   if (window.webkitAudioContext) {
+                     window.webkitAudioContext = window.AudioContext;
+                   }
                  }
                }
                
-               // 拦截所有音频元素的创建
+               // 拦截 <audio> 元素的创建和播放
                function interceptAudioElements() {
-                 const originalCreateElement = document.createElement;
-                 document.createElement = function(tagName) {
-                   const element = originalCreateElement.call(this, tagName);
-                   if (tagName.toLowerCase() === 'audio') {
-                     console.log('🔊 WebView: <audio> element created');
-                     window.ReactNativeWebView.postMessage(JSON.stringify({
-                       type: 'AUDIO_ELEMENT_CREATED',
-                       timestamp: Date.now()
-                     }));
-                   }
-                   return element;
-                 };
-               }
-               
-               // 拦截所有音频播放调用
-               function interceptAudioPlay() {
-                 const originalPlay = HTMLMediaElement.prototype.play;
-                 HTMLMediaElement.prototype.play = function() {
-                   if (this.tagName.toLowerCase() === 'audio') {
+                 const originalAudio = window.Audio;
+                 window.Audio = function(...args) {
+                   const audio = new originalAudio(...args);
+                   console.log('🔊 WebView: <audio> element created');
+                   window.ReactNativeWebView.postMessage(JSON.stringify({
+                     type: 'AUDIO_ELEMENT_CREATED',
+                     timestamp: Date.now()
+                   }));
+                   
+                   // 拦截play方法
+                   const originalPlay = audio.play;
+                   audio.play = function() {
                      console.log('🔊 WebView: audio.play() called');
                      window.ReactNativeWebView.postMessage(JSON.stringify({
                        type: 'AUDIO_PLAY_CALLED',
                        timestamp: Date.now()
                      }));
-                   }
-                   return originalPlay.call(this);
-                 };
-               }
-               
-               // 监听WebSocket消息中的音频数据
-               function interceptWebSocketAudio() {
-                 // 拦截WebSocket构造函数
-                 const OriginalWebSocket = window.WebSocket;
-                 window.WebSocket = function(url, protocols) {
-                   const ws = new OriginalWebSocket(url, protocols);
-                   
-                   // 拦截onmessage
-                   const originalOnMessage = ws.onmessage;
-                   ws.onmessage = function(event) {
-                     try {
-                       // 检查是否包含音频数据
-                       if (event.data && typeof event.data === 'string') {
-                         const data = JSON.parse(event.data);
-                         if (data.serverContent && data.serverContent.modelTurn && data.serverContent.modelTurn.parts) {
-                           const audioParts = data.serverContent.modelTurn.parts.filter(part => 
-                             part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.startsWith('audio/')
-                           );
-                           
-                           if (audioParts.length > 0) {
-                             console.log('🔊 WebView: WebSocket audio data detected:', audioParts.length, 'parts');
-                             window.ReactNativeWebView.postMessage(JSON.stringify({
-                               type: 'WEBSOCKET_AUDIO_DETECTED',
-                               partsCount: audioParts.length,
-                               timestamp: Date.now()
-                             }));
-                             
-                             // 尝试播放第一个音频部分
-                             const firstAudioPart = audioParts[0];
-                             if (firstAudioPart.inlineData && firstAudioPart.inlineData.data) {
-                               try {
-                                 // 转换base64为ArrayBuffer
-                                 const binaryString = atob(firstAudioPart.inlineData.data);
-                                 const bytes = new Uint8Array(binaryString.length);
-                                 for (let i = 0; i < binaryString.length; i++) {
-                                   bytes[i] = binaryString.charCodeAt(i);
-                                 }
-                                 
-                                 console.log('🔊 WebView: Converting audio data to ArrayBuffer, size:', bytes.byteLength);
-                                 createAndPlayAIAudio(bytes.buffer);
-                               } catch (error) {
-                                 console.error('🔊 WebView: Error processing audio data:', error);
-                               }
-                             }
-                           }
-                         }
-                       }
-                     } catch (error) {
-                       // 忽略JSON解析错误
-                     }
-                     
-                     // 调用原始处理函数
-                     if (originalOnMessage) {
-                       originalOnMessage.call(this, event);
-                     }
+                     return originalPlay.call(this);
                    };
                    
-                   return ws;
+                   return audio;
                  };
                  
-                 // 复制原型
-                 window.WebSocket.prototype = OriginalWebSocket.prototype;
-                 window.WebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
-                 window.WebSocket.OPEN = OriginalWebSocket.OPEN;
-                 window.WebSocket.CLOSING = OriginalWebSocket.CLOSING;
-                 window.WebSocket.CLOSED = OriginalWebSocket.CLOSED;
-               }
-               
-               // 检测是否在 Vercel 登录页面
-               function checkLoginStatus() {
-                 const currentUrl = window.location.href;
-                 console.log('Current URL:', currentUrl);
-                 
-                 if (currentUrl.includes('vercel.com/login')) {
-                   console.log('Detected Vercel login page');
-                   // 可以在这里添加自动登录逻辑（如果有的话）
-                 } else if (currentUrl.includes('live-api-web-console')) {
-                   console.log('Successfully loaded the target application');
+                 // 监听所有现有的audio元素
+                 const existingAudioElements = document.querySelectorAll('audio');
+                 existingAudioElements.forEach(audio => {
+                   console.log('🔊 WebView: Found existing <audio> element');
                    window.ReactNativeWebView.postMessage(JSON.stringify({
-                     type: 'LOGIN_SUCCESS',
-                     url: currentUrl
+                     type: 'AUDIO_ELEMENT_DETECTED',
+                     timestamp: Date.now(),
+                     src: audio.src || 'unknown'
                    }));
                    
-                   // 在页面加载完成后恢复音频上下文
-                   setTimeout(resumeAudioContext, 1000);
-                   
-                   // 设置音频监控
-                   setTimeout(() => {
-                     interceptAudioContext();
-                     interceptAudioElements();
-                     interceptAudioPlay();
-                     interceptWebSocketAudio();
-                     console.log('🔊 WebView: Audio monitoring setup complete');
-                   }, 2000);
-                 }
-               }
-               
-               // 监听 URL 变化
-               let lastUrl = location.href;
-               new MutationObserver(() => {
-                 const url = location.href;
-                 if (url !== lastUrl) {
-                   lastUrl = url;
-                   checkLoginStatus();
-                 }
-               }).observe(document, {subtree: true, childList: true});
-               
-               // 初始检查
-               checkLoginStatus();
-               
-               // 监听音频相关事件
-               document.addEventListener('click', function(e) {
-                 console.log('🔊 WebView: Click event on:', e.target.tagName, e.target.className);
-                 
-                 // 在每次用户点击时恢复音频上下文
-                 resumeAudioContext();
-                 
-                 // 检测麦克风按钮点击
-                 if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-                   const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
-                   console.log('🔊 WebView: Button clicked:', button.textContent, button.className);
-                   
-                   // 检查是否是录音按钮
-                   if (button.textContent.includes('mic') || button.textContent.includes('record') || 
-                       button.className.includes('mic') || button.className.includes('record')) {
-                     console.log('🔊 WebView: Microphone button detected!');
+                   // 监听播放事件
+                   audio.addEventListener('play', () => {
+                     console.log('🔊 WebView: Audio play event detected');
                      window.ReactNativeWebView.postMessage(JSON.stringify({
-                       type: 'MIC_BUTTON_CLICKED',
+                       type: 'AUDIO_PLAY_EVENT',
                        timestamp: Date.now()
                      }));
-                   }
-                 }
-                 
-                 if (e.target.tagName === 'VIDEO') {
-                   console.log('Video clicked, attempting fullscreen');
-                   if (e.target.requestFullscreen) {
-                     e.target.requestFullscreen();
-                   } else if (e.target.webkitRequestFullscreen) {
-                     e.target.webkitRequestFullscreen();
-                   } else if (e.target.msRequestFullscreen) {
-                     e.target.msRequestFullscreen();
-                   } else if (e.target.mozRequestFullScreen) {
-                     e.target.mozRequestFullScreen();
-                   }
-                 }
-               });
+                   });
+                   
+                   audio.addEventListener('error', (e) => {
+                     console.error('🔊 WebView: Audio error event:', e);
+                     window.ReactNativeWebView.postMessage(JSON.stringify({
+                       type: 'AUDIO_ERROR_EVENT',
+                       error: e.message || 'Unknown audio error',
+                       timestamp: Date.now()
+                     }));
+                   });
+                 });
+               }
                
-               // 监听音频元素
-               const audioObserver = new MutationObserver(function(mutations) {
-                 mutations.forEach(function(mutation) {
-                   if (mutation.type === 'childList') {
-                     mutation.addedNodes.forEach(function(node) {
+               // 监听DOM变化，检测新增的audio元素
+               function observeAudioElements() {
+                 const observer = new MutationObserver((mutations) => {
+                   mutations.forEach((mutation) => {
+                     mutation.addedNodes.forEach((node) => {
                        if (node.tagName === 'AUDIO') {
-                         console.log('🔊 WebView: Audio element detected:', node);
-                         
-                         // 强制播放新创建的音频元素
-                         setTimeout(() => {
-                           forcePlayAudio(node);
-                         }, 100);
-                         
+                         console.log('🔊 WebView: New <audio> element added to DOM');
                          window.ReactNativeWebView.postMessage(JSON.stringify({
                            type: 'AUDIO_ELEMENT_DETECTED',
-                           src: node.src,
-                           duration: node.duration
+                           timestamp: Date.now(),
+                           src: node.src || 'unknown'
                          }));
+                         
+                         // 为新元素添加事件监听器
+                         node.addEventListener('play', () => {
+                           console.log('🔊 WebView: Audio play event detected (new element)');
+                           window.ReactNativeWebView.postMessage(JSON.stringify({
+                             type: 'AUDIO_PLAY_EVENT',
+                             timestamp: Date.now()
+                           }));
+                         });
+                         
+                         node.addEventListener('error', (e) => {
+                           console.error('🔊 WebView: Audio error event (new element):', e);
+                           window.ReactNativeWebView.postMessage(JSON.stringify({
+                             type: 'AUDIO_ERROR_EVENT',
+                             error: e.message || 'Unknown audio error',
+                             timestamp: Date.now()
+                           }));
+                         });
                        }
                      });
-                   }
+                   });
                  });
-               });
-               
-               audioObserver.observe(document.body, {
-                 childList: true,
-                 subtree: true
-               });
-               
-               // 监听现有音频元素的播放事件
-               document.addEventListener('play', function(e) {
-                 if (e.target.tagName === 'AUDIO') {
-                   console.log('🔊 WebView: Audio play event detected');
-                   window.ReactNativeWebView.postMessage(JSON.stringify({
-                     type: 'AUDIO_PLAY_EVENT',
-                     timestamp: Date.now()
-                   }));
-                 }
-               }, true);
-               
-               // 监听音频错误事件
-               document.addEventListener('error', function(e) {
-                 if (e.target.tagName === 'AUDIO') {
-                   console.error('🔊 WebView: Audio error event:', e);
-                   window.ReactNativeWebView.postMessage(JSON.stringify({
-                     type: 'AUDIO_ERROR_EVENT',
-                     error: e.target.error ? e.target.error.message : 'Unknown error',
-                     timestamp: Date.now()
-                   }));
-                 }
-               }, true);
-               
-               if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                 navigator.mediaDevices.getUserMedia({ 
-                   video: { 
-                     width: { ideal: 1280 },
-                     height: { ideal: 720 }
-                   }, 
-                   audio: true 
-                 })
-                 .then(function(stream) {
-                   console.log('Camera and microphone access granted');
-                 })
-                 .catch(function(err) {
-                   console.log('Camera and microphone access denied:', err);
+                 
+                 observer.observe(document.body, {
+                   childList: true,
+                   subtree: true
                  });
                }
                
-               if (navigator.geolocation) {
-                 navigator.geolocation.getCurrentPosition(
-                   function(position) {
-                     console.log('Location access granted:', position.coords);
-                   },
-                   function(error) {
-                     console.log('Location access denied:', error);
-                   },
-                   { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-                 );
+               // WebSocket监控函数
+               function monitorWebSocketAudio() {
+                 if (window.WebSocket) {
+                   const OriginalWebSocket = window.WebSocket;
+                   window.WebSocket = function(...args) {
+                     const ws = new OriginalWebSocket(...args);
+                     console.log('🔊 WebView: WebSocket created');
+                     
+                     const originalOnMessage = ws.onmessage;
+                     ws.onmessage = function(event) {
+                       // 检查是否是音频数据
+                       if (event.data instanceof ArrayBuffer || 
+                           (typeof event.data === 'string' && event.data.includes('audio')) ||
+                           (event.data instanceof Blob)) {
+                         
+                         let audioDataDetected = false;
+                         let partsCount = 0;
+                         
+                         if (event.data instanceof ArrayBuffer) {
+                           audioDataDetected = true;
+                           console.log('🔊 WebView: WebSocket audio ArrayBuffer detected, size:', event.data.byteLength);
+                         } else if (typeof event.data === 'string') {
+                           try {
+                             const parsed = JSON.parse(event.data);
+                             if (parsed.type === 'audio' || 
+                                 (parsed.parts && parsed.parts.some(p => p.inlineData && p.inlineData.mimeType && p.inlineData.mimeType.startsWith('audio/')))) {
+                               audioDataDetected = true;
+                               partsCount = parsed.parts ? parsed.parts.length : 1;
+                               console.log('🔊 WebView: WebSocket audio JSON detected, parts:', partsCount);
+                               
+                               // 尝试创建和播放音频
+                               if (parsed.parts) {
+                                 parsed.parts.forEach(part => {
+                                   if (part.inlineData && part.inlineData.data && part.inlineData.mimeType.startsWith('audio/')) {
+                                     try {
+                                       const audioData = atob(part.inlineData.data);
+                                       const audioBuffer = new ArrayBuffer(audioData.length);
+                                       const audioView = new Uint8Array(audioBuffer);
+                                       for (let i = 0; i < audioData.length; i++) {
+                                         audioView[i] = audioData.charCodeAt(i);
+                                       }
+                                       
+                                       // 存储音频缓冲区
+                                       window.lastAudioBuffer = audioBuffer;
+                                       
+                                       // 尝试创建和播放音频
+                                       createAndPlayAIAudio(audioBuffer);
+                                     } catch (audioError) {
+                                       console.error('🔊 WebView: Error processing audio data:', audioError);
+                                     }
+                                   }
+                                 });
+                               }
+                             }
+                           } catch (e) {
+                             // 不是JSON，继续检查其他格式
+                           }
+                         }
+                         
+                         if (audioDataDetected) {
+                           window.ReactNativeWebView.postMessage(JSON.stringify({
+                             type: 'WEBSOCKET_AUDIO_DETECTED',
+                             timestamp: Date.now(),
+                             partsCount: partsCount
+                           }));
+                         }
+                       }
+                       
+                       if (originalOnMessage) {
+                         return originalOnMessage.call(this, event);
+                       }
+                     };
+                     
+                     return ws;
+                   };
+                 }
                }
                
-               document.addEventListener('fullscreenchange', function() {
-                 console.log('Fullscreen changed:', !!document.fullscreenElement);
-               });
+               // 初始化所有监控
+               function initializeAudioMonitoring() {
+                 console.log('🔊 WebView: Initializing audio monitoring...');
+                 
+                 // 恢复音频上下文
+                 resumeAudioContext();
+                 
+                 // 拦截AudioContext
+                 interceptAudioContext();
+                 
+                 // 拦截Audio元素
+                 interceptAudioElements();
+                 
+                 // 观察DOM变化
+                 observeAudioElements();
+                 
+                 // 监控WebSocket
+                 monitorWebSocketAudio();
+                 
+                 console.log('🔊 WebView: Audio monitoring initialized');
+               }
                
-               console.log('WebView setup complete');
+               // 页面加载完成后初始化
+               if (document.readyState === 'loading') {
+                 document.addEventListener('DOMContentLoaded', initializeAudioMonitoring);
+               } else {
+                 initializeAudioMonitoring();
+               }
+               
+               // 用户交互时恢复音频上下文
+               document.addEventListener('click', resumeAudioContext);
+               document.addEventListener('touchstart', resumeAudioContext);
+               
+               // 定期检查和恢复音频上下文
+               setInterval(() => {
+                 if (window.audioContext && window.audioContext.state === 'suspended') {
+                   console.log('🔊 WebView: AudioContext suspended, attempting to resume...');
+                   resumeAudioContext();
+                 }
+               }, 5000);
+               
              })();
              true;
            `}
@@ -701,31 +606,28 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFF',
+    paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   backButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    padding: 8,
   },
   backButtonText: {
     fontSize: 16,
+    color: '#FB7185',
     fontWeight: '600',
-    color: '#374151',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1F2937',
+    textAlign: 'center',
   },
   placeholder: {
-    width: 60,
+    width: 50,
   },
   webViewContainer: {
     flex: 1,
@@ -740,13 +642,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFF7ED',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFF7ED',
     zIndex: 1,
   },
   loadingText: {
-    marginTop: 16,
+    marginTop: 15,
     fontSize: 16,
     color: '#6B7280',
     fontWeight: '500',
@@ -755,15 +657,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    padding: 20,
   },
   errorEmoji: {
     fontSize: 64,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   errorTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#1F2937',
     marginBottom: 12,
     textAlign: 'center',
@@ -773,24 +675,35 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 24,
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
   errorDetails: {
     fontSize: 12,
     color: '#9CA3AF',
     textAlign: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    marginBottom: 20,
+    paddingHorizontal: 20,
+    fontFamily: 'monospace',
   },
   retryButton: {
     backgroundColor: '#FB7185',
+    paddingHorizontal: 32,
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   retryButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
-}); 
+});
